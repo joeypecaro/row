@@ -68,20 +68,17 @@
 .topbar-water-add.flash {
   background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(110, 231, 183, 0.7));
 }
-.topbar-finance-btn {
+.topbar-icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 42px;
+  width: 40px; height: 40px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.04);
   border-radius: 12px; text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
+  font-size: 18px; line-height: 1;
 }
-.topbar-finance-btn:hover { background: rgba(255, 255, 255, 0.08); }
-.topbar-finance-icon {
-  font-size: 20px; line-height: 1;
-  filter: grayscale(100%) brightness(1.4); opacity: 0.85;
-}
+.topbar-icon-btn:hover { background: rgba(255, 255, 255, 0.08); }
 .bottombar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
   display: flex; justify-content: space-around; align-items: stretch;
@@ -116,10 +113,9 @@ body.has-bottombar {
   .topbar-water-pill { padding: 8px 11px; gap: 6px; }
   .topbar-pill-count { font-size: 12px; }
   .topbar-water-add { width: 40px; font-size: 18px; }
-  .topbar-finance-btn { width: 40px; height: 38px; }
-  .topbar-finance-icon { font-size: 18px; }
-  .bottombar-tab-icon { font-size: 22px; }
-  .bottombar-tab { font-size: 10px; }
+  .topbar-icon-btn { width: 36px; height: 36px; font-size: 16px; }
+  .bottombar-tab-icon { font-size: 20px; }
+  .bottombar-tab { font-size: 9.5px; }
 }
 html, body { -webkit-text-size-adjust: 100%; }
 @media (max-width: 768px) {
@@ -157,9 +153,8 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     </a>
     <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
-  <a href="finance.html" class="topbar-finance-btn" id="topbarFinance" aria-label="Finance">
-    <span class="topbar-finance-icon">📊</span>
-  </a>
+  <a href="settings.html" class="topbar-icon-btn" id="topbarSettings" aria-label="Settings">⚙️</a>
+  <a href="main.html" class="topbar-icon-btn" id="topbarHome" aria-label="Home">🏠</a>
 </header>`;
 
   const bottombarHtml = `
@@ -181,14 +176,14 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
   </a>
 </nav>`;
 
-  function isFinancePage() {
+  function skipChromePage() {
     const p = (window.location.pathname || '').toLowerCase();
-    return p.endsWith('/finance.html') || p.endsWith('finance.html');
+    return p.endsWith('finance.html') || p.endsWith('settings.html');
   }
   function isEmbedded() {
     try { return window.self !== window.top; } catch (e) { return true; }
   }
-  function shouldShowChrome() { return !isFinancePage() && !isEmbedded(); }
+  function shouldShowChrome() { return !skipChromePage() && !isEmbedded(); }
   function currentPageKey() {
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('health.html')) return 'health';
@@ -196,7 +191,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     if (p.endsWith('calendar.html')) return 'calendar';
     if (p.endsWith('email.html')) return 'email';
     if (p.endsWith('main.html') || p.endsWith('index.html') || p.endsWith('/')) return 'main';
-    return 'main';
+    return '';
   }
 
   function injectStyleAndHTML() {

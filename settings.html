@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="color-scheme" content="dark">
+<title>Settings · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<style>
+:root {
+  --bg: #050506; --bg-card: rgba(255,255,255,0.04); --bg-secondary: rgba(255,255,255,0.035);
+  --border: rgba(255,255,255,0.06); --border-soft: rgba(255,255,255,0.04);
+  --border-strong: rgba(255,255,255,0.12);
+  --text-primary: #FAFAFA; --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E; --text-quaternary: #4D4B47;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text-secondary);
+  font-family: var(--font); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+body { min-height: 100vh; position: relative; overflow-x: hidden; }
+
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(60% 50% at 70% 15%, rgba(100,100,140,0.10) 0%, transparent 60%),
+    radial-gradient(50% 40% at 20% 88%, rgba(180,180,200,0.06) 0%, transparent 60%);
+  filter: blur(40px); pointer-events: none; z-index: 0;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: 1;
+}
+
+.shell {
+  position: relative; z-index: 2;
+  max-width: 540px; margin: 0 auto;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+
+/* ── Back button ── */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px 8px 10px; margin-bottom: 24px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px; color: var(--text-secondary);
+  font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+
+/* ── Page title ── */
+.page-title {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.022em;
+  background: linear-gradient(135deg, #FFFFFF 0%, #888888 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; color: transparent;
+  margin: 0 0 32px;
+}
+
+/* ── Section label ── */
+.settings-label {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-quaternary); margin: 0 2px 10px;
+}
+
+/* ── Card ── */
+.settings-card {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.40);
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+
+/* ── Google account row ── */
+.account-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 22px 22px 18px;
+}
+.account-avatar {
+  width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900;
+  background: linear-gradient(135deg, #1A73E8, #4285F4);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(26,115,232,0.30);
+}
+.account-avatar.disconnected {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-quaternary);
+  box-shadow: none;
+}
+.account-info { flex: 1; min-width: 0; }
+.account-name {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 2px;
+}
+.account-email {
+  font-size: 12px; color: var(--text-tertiary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.account-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 4px 10px; border-radius: 999px;
+  font-family: var(--font-mono);
+}
+.account-status.connected {
+  background: rgba(107,227,164,0.12); color: #6BE3A4;
+  border: 1px solid rgba(107,227,164,0.25);
+}
+.account-status.disconnected {
+  background: rgba(255,255,255,0.05); color: var(--text-quaternary);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.account-divider {
+  height: 1px; background: var(--border-soft); margin: 0 22px;
+}
+
+/* ── Action rows ── */
+.action-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px; gap: 12px;
+}
+.action-row-label {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.45; flex: 1;
+}
+.action-row-label strong { color: var(--text-primary); display: block; font-size: 14px; margin-bottom: 1px; }
+
+/* ── Buttons ── */
+.btn-google {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 22px; border-radius: 12px;
+  border: 1px solid rgba(26,115,232,0.45);
+  background: linear-gradient(180deg, rgba(26,115,232,0.22) 0%, rgba(26,115,232,0.12) 100%);
+  color: #4285F4; font: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.18s, transform 0.12s;
+  box-shadow: 0 0 20px rgba(26,115,232,0.15);
+}
+.btn-google:hover { background: rgba(26,115,232,0.28); box-shadow: 0 0 28px rgba(26,115,232,0.28); transform: translateY(-1px); }
+
+.btn-danger {
+  padding: 9px 16px; border-radius: 10px;
+  border: 1px solid rgba(239,68,68,0.30);
+  background: rgba(239,68,68,0.06);
+  color: #FF6B6B; font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-danger:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.50); }
+
+/* ── Scope list ── */
+.scope-list {
+  padding: 0 22px 18px; display: flex; flex-direction: column; gap: 6px;
+}
+.scope-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  font-size: 13px; color: var(--text-secondary);
+}
+.scope-item-icon { font-size: 15px; flex-shrink: 0; }
+.scope-item-text { flex: 1; }
+.scope-item-text strong { color: var(--text-primary); font-weight: 600; }
+.scope-check {
+  font-size: 13px; flex-shrink: 0;
+  color: var(--text-quaternary);
+}
+.scope-check.on { color: #6BE3A4; }
+
+/* ── Service links ── */
+.service-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 22px; text-decoration: none;
+  transition: background 0.15s;
+  border-top: 1px solid var(--border-soft);
+}
+.service-row:first-child { border-top: none; }
+.service-row:hover { background: rgba(255,255,255,0.04); }
+.service-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+}
+.service-info { flex: 1; }
+.service-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 1px; }
+.service-desc { font-size: 11px; color: var(--text-tertiary); }
+.service-arrow { color: var(--text-quaternary); font-size: 16px; }
+
+/* ── Loading skeleton ── */
+.skel-line {
+  height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%; animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(107,227,164,0.92); color: #0a0a0b;
+  padding: 10px 20px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0; transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+::selection { background: rgba(26,115,232,0.25); color: var(--text-primary); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <a href="main.html" class="back-btn">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back to Main
+  </a>
+
+  <h1 class="page-title">Settings</h1>
+
+  <!-- ── Google Account ── -->
+  <div class="settings-label">Google Account</div>
+  <div class="settings-card">
+
+    <!-- Connected state -->
+    <div id="connectedState" style="display:none">
+      <div class="account-row">
+        <div class="account-avatar" id="accountAvatar">G</div>
+        <div class="account-info">
+          <div class="account-name" id="accountName">Google Account</div>
+          <div class="account-email" id="accountEmail"></div>
+        </div>
+        <span class="account-status connected">● Connected</span>
+      </div>
+      <div class="account-divider"></div>
+      <div class="scope-list" id="scopeList">
+        <div class="scope-item">
+          <span class="scope-item-icon">❤️</span>
+          <span class="scope-item-text"><strong>Fitness &amp; Health</strong> — steps, sleep, heart rate</span>
+          <span class="scope-check on">✓</span>
+        </div>
+        <div class="scope-item">
+          <span class="scope-item-icon">📅</span>
+          <span class="scope-item-text"><strong>Calendar</strong> — read and manage events</span>
+          <span class="scope-check on">✓</span>
+        </div>
+        <div class="scope-item">
+          <span class="scope-item-icon">✉️</span>
+          <span class="scope-item-text"><strong>Gmail</strong> — read, send, and delete mail</span>
+          <span class="scope-check on">✓</span>
+        </div>
+      </div>
+      <div class="account-divider"></div>
+      <div class="action-row">
+        <div class="action-row-label">Remove your Google account from this dashboard.</div>
+        <button class="btn-danger" id="disconnectBtn" type="button">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Disconnected state -->
+    <div id="disconnectedState">
+      <div class="account-row">
+        <div class="account-avatar disconnected">G</div>
+        <div class="account-info">
+          <div class="account-name">Not connected</div>
+          <div class="account-email">Sign in to enable Fitness, Calendar &amp; Email</div>
+        </div>
+        <span class="account-status disconnected">○ Off</span>
+      </div>
+      <div class="account-divider"></div>
+      <div class="action-row">
+        <button class="btn-google" id="connectBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.42 17.64 12.11 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Sign in with Google
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Connected Services ── -->
+  <div class="settings-label">Connected Services</div>
+  <div class="settings-card">
+    <a href="fitbit.html" class="service-row">
+      <div class="service-icon">❤️</div>
+      <div class="service-info">
+        <div class="service-name">Fitness &amp; Vitals</div>
+        <div class="service-desc">Steps, sleep, heart rate, readiness</div>
+      </div>
+      <span class="service-arrow">›</span>
+    </a>
+    <a href="calendar.html" class="service-row">
+      <div class="service-icon">📅</div>
+      <div class="service-info">
+        <div class="service-name">Calendar</div>
+        <div class="service-desc">Upcoming events across all calendars</div>
+      </div>
+      <span class="service-arrow">›</span>
+    </a>
+    <a href="email.html" class="service-row">
+      <div class="service-icon">✉️</div>
+      <div class="service-info">
+        <div class="service-name">Email Inbox</div>
+        <div class="service-desc">Today's inbox, sorted by priority</div>
+      </div>
+      <span class="service-arrow">›</span>
+    </a>
+    <a href="finance.html" class="service-row">
+      <div class="service-icon">📊</div>
+      <div class="service-info">
+        <div class="service-name">Finances</div>
+        <div class="service-desc">Budget tracker and spending overview</div>
+      </div>
+      <span class="service-arrow">›</span>
+    </a>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const CLIENT_ID     = '346851682856-fc9hou4644upor52m9ohjpvsuvlj3rjc.apps.googleusercontent.com';
+  const ALL_SCOPES    = [
+    'https://www.googleapis.com/auth/fitness.activity.read',
+    'https://www.googleapis.com/auth/fitness.sleep.read',
+    'https://www.googleapis.com/auth/fitness.heart_rate.read',
+    'https://www.googleapis.com/auth/fitness.body.read',
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/gmail.modify',
+  ].join(' ');
+  const TOKEN_KEY     = 'google_access_token';
+  const REFRESH_KEY   = 'google_refresh_token';
+  const TOKEN_EXP_KEY = 'google_token_exp';
+
+  function getToken() {
+    const exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0', 10);
+    if (exp && Date.now() > exp) return null;
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  async function refreshAccessToken() {
+    const rt = localStorage.getItem(REFRESH_KEY);
+    if (!rt) return null;
+    try {
+      const r = await fetch('/api/google-refresh', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+      const d = await r.json();
+      if (!d.access_token) return null;
+      localStorage.setItem(TOKEN_KEY, d.access_token);
+      localStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + (d.expires_in || 3600) * 1000));
+      return d.access_token;
+    } catch { return null; }
+  }
+
+  function redirectUri() { return window.location.origin + '/settings.html'; }
+
+  function startLogin() {
+    const state = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID() : Math.random().toString(36).slice(2, 18);
+    sessionStorage.setItem('oauth_state', state);
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: CLIENT_ID, redirect_uri: redirectUri(),
+      response_type: 'code', scope: ALL_SCOPES,
+      access_type: 'offline', prompt: 'consent', state,
+    });
+  }
+
+  async function handleCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get('code');
+    if (!code) return false;
+    const state = params.get('state');
+    const saved = sessionStorage.getItem('oauth_state');
+    sessionStorage.removeItem('oauth_state');
+    if (state !== saved) { history.replaceState(null, '', window.location.pathname); return false; }
+    try {
+      const r = await fetch('/api/google-token', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, redirect_uri: redirectUri() }),
+      });
+      const d = await r.json();
+      if (!d.access_token) return false;
+      localStorage.setItem(TOKEN_KEY, d.access_token);
+      localStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + (d.expires_in || 3600) * 1000));
+      if (d.refresh_token) localStorage.setItem(REFRESH_KEY, d.refresh_token);
+      history.replaceState(null, '', window.location.pathname);
+      return true;
+    } catch { return false; }
+  }
+
+  async function fetchProfile(tok) {
+    try {
+      const r = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+        headers: { Authorization: 'Bearer ' + tok },
+      });
+      if (!r.ok) return null;
+      return r.json();
+    } catch { return null; }
+  }
+
+  function showConnected(profile) {
+    document.getElementById('disconnectedState').style.display = 'none';
+    document.getElementById('connectedState').style.display    = '';
+    if (profile) {
+      const av = document.getElementById('accountAvatar');
+      if (profile.picture) {
+        av.innerHTML = `<img src="${profile.picture}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">`;
+      } else {
+        av.textContent = (profile.name || 'G')[0].toUpperCase();
+      }
+      document.getElementById('accountName').textContent  = profile.name  || 'Google Account';
+      document.getElementById('accountEmail').textContent = profile.email || '';
+    }
+  }
+
+  function showDisconnected() {
+    document.getElementById('connectedState').style.display    = 'none';
+    document.getElementById('disconnectedState').style.display = '';
+  }
+
+  function disconnect() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(TOKEN_EXP_KEY);
+    showDisconnected();
+    showToast('Google account disconnected');
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  async function init() {
+    const wasCallback = await handleCallback();
+    let tok = getToken();
+    if (!tok) tok = await refreshAccessToken();
+
+    if (tok) {
+      showConnected(null);
+      const profile = await fetchProfile(tok);
+      showConnected(profile);
+      if (wasCallback) showToast('Google account connected ✓');
+    } else {
+      showDisconnected();
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', startLogin);
+    document.getElementById('disconnectBtn').addEventListener('click', () => {
+      if (confirm('Disconnect your Google account? Fitness data, Calendar, and Email will stop loading until you reconnect.')) {
+        disconnect();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => init(), { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
