@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="color-scheme" content="dark">
+<title>Fitbit Data · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg: #050506; --bg-card: rgba(255,255,255,0.04); --bg-secondary: rgba(255,255,255,0.035);
+  --bg-input: rgba(0,0,0,0.28); --border: rgba(255,255,255,0.06); --border-soft: rgba(255,255,255,0.04);
+  --border-strong: rgba(255,255,255,0.12); --text-primary: #FAFAFA; --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E; --font: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body { min-height: 100vh; position: relative; overflow-x: hidden; }
+
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(60% 50% at 82% 14%, rgba(26,115,232,0.14) 0%, transparent 60%),
+    radial-gradient(50% 40% at 18% 90%, rgba(180,180,200,0.06) 0%, transparent 60%);
+  filter: blur(40px);
+  pointer-events: none; z-index: 0;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none; z-index: 1;
+}
+@keyframes drift { 0% { transform: translate(0,0); } 100% { transform: translate(-2%,2%); } }
+
+main {
+  position: relative; z-index: 2;
+  max-width: 720px; margin: 0 auto;
+  padding: 56px 20px 80px;
+}
+
+/* ── Section title ── */
+.section-title {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); margin: 0 4px 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-title::before { content: '≡'; font-size: 14px; opacity: 0.5; }
+
+/* ── Shared card ── */
+.fitbit-card {
+  padding: 22px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  margin-bottom: 20px;
+}
+
+/* ── Page title row ── */
+.dash-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 32px; gap: 12px;
+}
+.dash-title {
+  font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(135deg, #FFFFFF 0%, #888888 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; color: transparent;
+  line-height: 1.15; margin: 0;
+}
+.refresh-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-secondary); cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.2s; flex-shrink: 0;
+  font-family: inherit; padding: 0;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.10); color: var(--text-primary); }
+.refresh-btn.spinning { animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Last updated ── */
+.last-updated {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+  margin-bottom: 24px; margin-left: 4px;
+}
+
+/* ── Section wrapper ── */
+.fb-section { margin-bottom: 36px; }
+
+/* ── Goals grid ── */
+.goals-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+@media (max-width: 480px) { .goals-grid { grid-template-columns: 1fr; } }
+
+.goal-chip {
+  padding: 10px 14px; border-radius: 12px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+}
+.goal-chip.met {
+  background: rgba(107,227,164,0.08);
+  border: 1px solid rgba(107,227,164,0.25);
+}
+.goal-chip.partial {
+  background: rgba(242,192,99,0.08);
+  border: 1px solid rgba(242,192,99,0.30);
+}
+.goal-chip.missed {
+  background: rgba(255,138,138,0.08);
+  border: 1px solid rgba(255,138,138,0.25);
+}
+.goal-chip-icon { font-size: 15px; font-weight: 900; flex-shrink: 0; }
+.goal-chip.met    .goal-chip-icon { color: #6BE3A4; }
+.goal-chip.partial .goal-chip-icon { color: #F2C063; }
+.goal-chip.missed  .goal-chip-icon { color: #FF8A8A; }
+.goal-chip-label { flex: 1; line-height: 1.25; }
+.goal-chip-val { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+
+/* ── Recovery ring ── */
+.ring-container {
+  display: flex; flex-direction: column; align-items: center; margin-bottom: 18px;
+}
+.fitbit-ring-wrap { position: relative; width: 220px; max-width: 76%; aspect-ratio: 1; margin: 0 auto 18px; }
+.fitbit-ring { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 20px rgba(26,115,232,0.10)); }
+.fitbit-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 12; }
+.fitbit-ring-fill {
+  fill: none; stroke: #1A73E8; stroke-width: 12; stroke-linecap: round;
+  stroke-dasharray: 603.19; stroke-dashoffset: 603.19;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1), stroke 0.4s;
+}
+.fitbit-ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.ring-num { font-size: 58px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.ring-unit { font-size: 10px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 10px; }
+.ring-verdict { font-size: 12.5px; font-weight: 600; margin-top: 6px; }
+
+/* Verdict card */
+.fitbit-verdict {
+  margin-top: 0; padding: 16px 18px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-left: 2px solid rgba(26,115,232,0.45);
+  border-radius: 0 12px 12px 0;
+}
+.fitbit-verdict-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fitbit-verdict-eyebrow { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700; }
+.fitbit-verdict-badge {
+  font-size: 9.5px; font-weight: 800; padding: 3px 9px;
+  border-radius: 999px; letter-spacing: 0.14em; text-transform: uppercase; border: 1px solid;
+}
+.fitbit-verdict-headline { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 10px; letter-spacing: -0.01em; }
+.fitbit-verdict-reasons { font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; }
+
+/* ── Sleep section ── */
+.sleep-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 16px; }
+.sleep-big-num { display: flex; flex-direction: column; }
+.sleep-big-val { font-size: 52px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.sleep-big-label { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 6px; }
+.sleep-efficiency-block { text-align: right; }
+.sleep-eff-val { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.sleep-eff-label { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 6px; }
+
+/* Sleep stages bar */
+.stages-bar-wrap { margin-bottom: 14px; }
+.stages-bar {
+  display: flex; height: 12px;
+  background: rgba(255,255,255,0.04); border-radius: 999px; overflow: hidden;
+  margin-bottom: 10px;
+}
+.stage-seg { height: 100%; transition: width 0.7s cubic-bezier(0.22,1,0.36,1); }
+.stage-rem   { background: #1A73E8; }
+.stage-deep  { background: #7DD3FC; }
+.stage-light { background: #76746E; }
+.stage-awake { background: #38362F; border-right: 1px solid rgba(255,255,255,0.08); }
+
+.stages-labels { display: flex; justify-content: space-between; gap: 4px; flex-wrap: wrap; }
+.stages-label-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.stages-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.sd-rem   { background: #1A73E8; }
+.sd-deep  { background: #7DD3FC; }
+.sd-light { background: #76746E; }
+.sd-awake { background: #38362F; border: 1px solid rgba(255,255,255,0.15); }
+.stages-label-dur { font-family: var(--font-mono); font-weight: 700; font-size: 11px; color: var(--text-primary); margin-left: 2px; }
+
+/* Sleep 2×2 tiles */
+.sleep-tiles { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 14px; }
+.sleep-tile {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px; text-align: center;
+}
+.sleep-tile-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.sleep-tile-val { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text-primary); line-height: 1; }
+.sleep-tile-pct { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 4px; }
+
+/* ── Activity section ── */
+.activity-tiles { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+@media (max-width: 480px) { .activity-tiles { grid-template-columns: 1fr; } }
+.activity-tile {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
+.activity-tile-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.activity-tile-val { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-primary); margin-bottom: 10px; }
+.activity-tile-sub { font-size: 10px; color: var(--text-tertiary); font-family: var(--font-mono); margin-bottom: 8px; }
+.activity-prog-track { height: 4px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; }
+.activity-prog-fill { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); background: #1A73E8; }
+
+/* ── Heart & Body ── */
+.bio-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+.bio-tile {
+  position: relative;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
+.bio-tile.span-full { grid-column: 1 / -1; }
+.bio-tile-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.bio-tile-val { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.bio-tile-unit { font-size: 12px; font-weight: 600; color: var(--text-tertiary); margin-left: 3px; }
+.bio-tile-sub { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); margin-top: 6px; }
+.bio-zone {
+  position: absolute; top: 10px; right: 10px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.bio-zone.z-good { background: #1A73E8; box-shadow: 0 0 7px rgba(26,115,232,0.55); }
+.bio-zone.z-norm { background: rgba(255,255,255,0.30); }
+.bio-zone.z-warn { background: #F2C063; box-shadow: 0 0 7px rgba(242,192,99,0.55); }
+.bio-zone.z-bad  { background: #FF8A8A; box-shadow: 0 0 7px rgba(255,138,138,0.55); }
+
+/* Sparkline */
+.sparkline { width: 100%; height: 36px; margin-top: 8px; overflow: visible; }
+
+/* ── Improvements section ── */
+.tip-list { display: flex; flex-direction: column; gap: 8px; }
+.tip-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: 14px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  font-size: 13px; color: var(--text-secondary); line-height: 1.55;
+}
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.tip-all-good {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; border-radius: 14px;
+  background: rgba(107,227,164,0.06); border: 1px solid rgba(107,227,164,0.20);
+  font-size: 14px; font-weight: 600; color: #6BE3A4;
+}
+
+/* ── Not connected card ── */
+.not-connected-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 40px 20px; gap: 10px;
+}
+.nc-brand-mark {
+  width: 52px; height: 52px; border-radius: 16px;
+  background: linear-gradient(135deg, #1A73E8, #4285F4);
+  color: #fff; font-weight: 900; font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 24px rgba(26,115,232,0.35); margin-bottom: 6px;
+}
+.nc-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
+.nc-sub { font-size: 13px; color: var(--text-tertiary); max-width: 300px; line-height: 1.6; margin-bottom: 6px; }
+.nc-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 999px;
+  border: 1px solid rgba(26,115,232,0.50);
+  background: linear-gradient(180deg, rgba(26,115,232,0.20) 0%, rgba(26,115,232,0.10) 100%);
+  color: #4285F4; font: inherit; font-size: 14px; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.18s;
+  box-shadow: 0 0 22px rgba(26,115,232,0.18);
+  margin-top: 4px;
+}
+.nc-link:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(26,115,232,0.30); }
+
+/* ── Zone legend strip ── */
+.zone-legend {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 14px;
+  margin-top: 16px; padding: 10px 12px;
+  background: rgba(255,255,255,0.02); border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.zone-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.04em; }
+.zl-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.zl-good { background: #1A73E8; box-shadow: 0 0 7px rgba(26,115,232,0.55); }
+.zl-norm { background: rgba(255,255,255,0.30); }
+.zl-warn { background: #F2C063; box-shadow: 0 0 7px rgba(242,192,99,0.55); }
+.zl-bad  { background: #FF8A8A; box-shadow: 0 0 7px rgba(255,138,138,0.55); }
+
+::selection { background: rgba(26,115,232,0.25); color: var(--text-primary); }
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+
+<main>
+
+  <!-- Page title row -->
+  <div class="dash-title-row">
+    <h1 class="dash-title">Fitbit Data</h1>
+    <button class="refresh-btn" id="refreshBtn" title="Refresh data" type="button">⟳</button>
+  </div>
+
+  <div id="lastUpdated" class="last-updated" style="display:none"></div>
+
+  <!-- NOT CONNECTED STATE -->
+  <div id="notConnected" class="fitbit-card" style="display:none">
+    <div class="not-connected-wrap">
+      <div class="nc-brand-mark">G</div>
+      <div class="nc-title">Not connected</div>
+      <div class="nc-sub">Connect Google Health on the Health page to see your Fitbit Air data here.</div>
+      <a href="health.html" class="nc-link">Go to Health page →</a>
+    </div>
+  </div>
+
+  <!-- ── SECTION 1: Today's Goals ── -->
+  <section class="fb-section" id="goalsSection" style="display:none">
+    <div class="section-title">Today's Goals</div>
+    <div class="fitbit-card" style="padding-bottom:18px">
+      <div class="goals-grid" id="goalsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2: Recovery ── -->
+  <section class="fb-section" id="recoverySection" style="display:none">
+    <div class="section-title">Recovery</div>
+    <div class="fitbit-card">
+      <div class="ring-container">
+        <div class="fitbit-ring-wrap">
+          <svg class="fitbit-ring" viewBox="0 0 220 220" aria-hidden="true">
+            <circle class="fitbit-ring-track" cx="110" cy="110" r="96"/>
+            <circle class="fitbit-ring-fill" cx="110" cy="110" r="96" id="readinessRing"/>
+          </svg>
+          <div class="fitbit-ring-center">
+            <div id="readinessNum" class="ring-num">—</div>
+            <div class="ring-unit">readiness</div>
+            <div id="readinessVerdict" class="ring-verdict">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="verdictCard" class="fitbit-verdict" style="display:none">
+        <div class="fitbit-verdict-head">
+          <span class="fitbit-verdict-eyebrow">Today's call</span>
+          <span id="verdictBadge" class="fitbit-verdict-badge"></span>
+        </div>
+        <div id="verdictHeadline" class="fitbit-verdict-headline"></div>
+        <div id="verdictReasons" class="fitbit-verdict-reasons"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 3: Sleep ── -->
+  <section class="fb-section" id="sleepSection" style="display:none">
+    <div class="section-title">Sleep</div>
+    <div class="fitbit-card">
+      <div class="sleep-hero">
+        <div class="sleep-big-num">
+          <div id="sleepHours" class="sleep-big-val">—</div>
+          <div class="sleep-big-label">hrs sleep</div>
+        </div>
+        <div class="sleep-efficiency-block">
+          <div id="sleepEfficiency" class="sleep-eff-val">—</div>
+          <div class="sleep-eff-label">efficiency</div>
+        </div>
+      </div>
+
+      <div class="stages-bar-wrap" id="stagesBar" style="display:none">
+        <div class="stages-bar">
+          <div class="stage-seg stage-rem"   id="segRem"   style="width:0%"></div>
+          <div class="stage-seg stage-deep"  id="segDeep"  style="width:0%"></div>
+          <div class="stage-seg stage-light" id="segLight" style="width:0%"></div>
+          <div class="stage-seg stage-awake" id="segAwake" style="width:0%"></div>
+        </div>
+        <div class="stages-labels">
+          <div class="stages-label-item"><span class="stages-dot sd-rem"></span>REM<span class="stages-label-dur" id="lblRem">—</span></div>
+          <div class="stages-label-item"><span class="stages-dot sd-deep"></span>Deep<span class="stages-label-dur" id="lblDeep">—</span></div>
+          <div class="stages-label-item"><span class="stages-dot sd-light"></span>Light<span class="stages-label-dur" id="lblLight">—</span></div>
+          <div class="stages-label-item"><span class="stages-dot sd-awake"></span>Awake<span class="stages-label-dur" id="lblAwake">—</span></div>
+        </div>
+      </div>
+
+      <div class="sleep-tiles" id="sleepTiles" style="display:none">
+        <div class="sleep-tile">
+          <div class="sleep-tile-label">REM</div>
+          <div class="sleep-tile-val" id="tileRem">—</div>
+          <div class="sleep-tile-pct" id="tileRemPct">—</div>
+        </div>
+        <div class="sleep-tile">
+          <div class="sleep-tile-label">Deep</div>
+          <div class="sleep-tile-val" id="tileDeep">—</div>
+          <div class="sleep-tile-pct" id="tileDeepPct">—</div>
+        </div>
+        <div class="sleep-tile">
+          <div class="sleep-tile-label">Light</div>
+          <div class="sleep-tile-val" id="tileLight">—</div>
+          <div class="sleep-tile-pct" id="tileLightPct">—</div>
+        </div>
+        <div class="sleep-tile">
+          <div class="sleep-tile-label">Awake</div>
+          <div class="sleep-tile-val" id="tileAwake">—</div>
+          <div class="sleep-tile-pct" id="tileAwakePct">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 4: Activity ── -->
+  <section class="fb-section" id="activitySection" style="display:none">
+    <div class="section-title">Activity</div>
+    <div class="fitbit-card">
+      <div class="activity-tiles">
+        <div class="activity-tile">
+          <div class="activity-tile-label">Active Zone Min</div>
+          <div class="activity-tile-val" id="azmVal">—</div>
+          <div class="activity-tile-sub">goal: 22 min</div>
+          <div class="activity-prog-track"><div class="activity-prog-fill" id="azmBar" style="width:0%"></div></div>
+        </div>
+        <div class="activity-tile">
+          <div class="activity-tile-label">Steps</div>
+          <div class="activity-tile-val" id="stepsVal">—</div>
+          <div class="activity-tile-sub">goal: 10,000</div>
+          <div class="activity-prog-track"><div class="activity-prog-fill" id="stepsBar" style="width:0%"></div></div>
+        </div>
+        <div class="activity-tile">
+          <div class="activity-tile-label">Calories</div>
+          <div class="activity-tile-val" id="calsVal">—</div>
+          <div class="activity-tile-sub">burned today</div>
+          <div class="activity-prog-track"><div class="activity-prog-fill" id="calsBar" style="width:0%;background:#6BE3A4"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 5: Heart & Body ── -->
+  <section class="fb-section" id="heartSection" style="display:none">
+    <div class="section-title">Heart &amp; Body</div>
+    <div class="fitbit-card">
+      <div class="bio-grid">
+        <!-- RHR spans full width -->
+        <div class="bio-tile span-full">
+          <span class="bio-zone" id="zoneRhr"></span>
+          <div class="bio-tile-label">Resting Heart Rate</div>
+          <div>
+            <span class="bio-tile-val" id="rhrVal">—</span><span class="bio-tile-unit">bpm</span>
+          </div>
+          <svg class="sparkline" id="sparkline" viewBox="0 0 300 36" preserveAspectRatio="none">
+            <polyline id="sparklineLine" points="" fill="none" stroke="rgba(26,115,232,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="bio-tile">
+          <span class="bio-zone" id="zoneHrv"></span>
+          <div class="bio-tile-label">HRV</div>
+          <div>
+            <span class="bio-tile-val" id="hrvVal">—</span><span class="bio-tile-unit">ms</span>
+          </div>
+          <div class="bio-tile-sub" id="hrvSub"></div>
+        </div>
+
+        <div class="bio-tile">
+          <span class="bio-zone" id="zoneSpo2"></span>
+          <div class="bio-tile-label">Blood O₂</div>
+          <div>
+            <span class="bio-tile-val" id="spo2Val">—</span><span class="bio-tile-unit">%</span>
+          </div>
+          <div class="bio-tile-sub" id="spo2Sub"></div>
+        </div>
+
+        <div class="bio-tile" id="tempTile" style="display:none">
+          <span class="bio-zone" id="zoneTemp"></span>
+          <div class="bio-tile-label">Skin Temp Δ</div>
+          <div>
+            <span class="bio-tile-val" id="tempVal">—</span><span class="bio-tile-unit">°C</span>
+          </div>
+          <div class="bio-tile-sub" id="tempSub"></div>
+        </div>
+      </div>
+
+      <div class="zone-legend">
+        <span><span class="zl-dot zl-good"></span>Optimal</span>
+        <span><span class="zl-dot zl-norm"></span>Normal</span>
+        <span><span class="zl-dot zl-warn"></span>Watch</span>
+        <span><span class="zl-dot zl-bad"></span>Low</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 6: Improvements ── -->
+  <section class="fb-section" id="tipsSection" style="display:none">
+    <div class="section-title">Improvements</div>
+    <div class="tip-list" id="tipList"></div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  const TOKEN_KEY     = 'fitbit_access_token';
+  const TOKEN_EXP_KEY = 'fitbit_token_exp';
+  const SYNC_KEY      = 'gh_last_sync';
+
+  // ── Helpers ────────────────────────────────────────────────
+  function getToken() {
+    const exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0', 10);
+    if (Date.now() > exp) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_EXP_KEY);
+      return null;
+    }
+    return localStorage.getItem(TOKEN_KEY);
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function fmtMins(mins) {
+    if (mins == null || isNaN(mins)) return '—';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h + 'h ' + m + 'm';
+  }
+
+  function fmtMinsShort(mins) {
+    if (mins == null || isNaN(mins)) return '—';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    if (h === 0) return m + 'm';
+    if (m === 0) return h + 'h';
+    return h + 'h ' + m + 'm';
+  }
+
+  function pct(a, b) {
+    if (!b) return 0;
+    return Math.min(100, Math.round((a / b) * 100));
+  }
+
+  function show(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+  function hide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+  function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+
+  // ── OAuth callback handler (in case fitbit.html is used as redirect) ──
+  function parseCallback() {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return false;
+    const p = {};
+    hash.split('&').forEach(s => {
+      const [k, v] = s.split('=');
+      if (k) p[decodeURIComponent(k)] = decodeURIComponent(v || '');
+    });
+    if (p.access_token) {
+      localStorage.setItem(TOKEN_KEY, p.access_token);
+      localStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + Number(p.expires_in || 86400) * 1000));
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      return true;
+    }
+    return false;
+  }
+
+  // ── Fitbit API ─────────────────────────────────────────────
+  async function fbFetch(path) {
+    const tok = getToken();
+    if (!tok) throw new Error('not_authed');
+    const r = await fetch('https://api.fitbit.com' + path, {
+      headers: { Authorization: 'Bearer ' + tok }
+    });
+    if (r.status === 401) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_EXP_KEY); throw new Error('token_expired'); }
+    if (!r.ok) throw new Error('api_' + r.status);
+    return r.json();
+  }
+
+  // ── Zone classification ────────────────────────────────────
+  function zoneClass(metric, val) {
+    if (val == null || isNaN(val)) return '';
+    switch (metric) {
+      case 'readiness': return val >= 67 ? 'z-good' : val >= 34 ? 'z-norm' : 'z-bad';
+      case 'sleep':     return val >= 85 ? 'z-good' : val >= 70 ? 'z-norm' : val >= 50 ? 'z-warn' : 'z-bad';
+      case 'azm':       return val >= 22 ? 'z-good' : val >= 10 ? 'z-norm' : 'z-warn';
+      case 'steps':     return val >= 10000 ? 'z-good' : val >= 5000 ? 'z-norm' : 'z-warn';
+      case 'rhr':       return val < 55 ? 'z-good' : val < 65 ? 'z-norm' : val < 75 ? 'z-warn' : 'z-bad';
+      case 'hrv':       return val >= 50 ? 'z-good' : val >= 30 ? 'z-norm' : val >= 15 ? 'z-warn' : 'z-bad';
+      case 'spo2':      return val >= 95 ? 'z-good' : val >= 90 ? 'z-warn' : 'z-bad';
+      case 'temp':      return Math.abs(val) <= 0.5 ? 'z-good' : Math.abs(val) <= 1.0 ? 'z-warn' : 'z-bad';
+      default: return '';
+    }
+  }
+
+  function ringColor(r) {
+    if (r == null) return '#1A73E8';
+    if (r >= 67) return '#4285F4';
+    if (r >= 34) return '#F2C063';
+    return '#FF8A8A';
+  }
+
+  function setZone(id, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'bio-zone' + (cls ? ' ' + cls : '');
+  }
+
+  // ── Goals evaluation ───────────────────────────────────────
+  function buildGoals(data) {
+    const { readiness, sleepMins, sleepEfficiency, azm, steps, rhr, hrv, spo2 } = data;
+    const goals = [];
+
+    function add(label, state, val) {
+      goals.push({ label, state, val });
+    }
+
+    // Readiness
+    if (readiness != null) {
+      if (readiness >= 67) add('Recovery ≥ Optimal', 'met', readiness);
+      else if (readiness >= 34) add('Recovery ≥ Optimal', 'partial', readiness);
+      else add('Recovery ≥ Optimal', 'missed', readiness);
+    }
+
+    // Sleep duration
+    if (sleepMins != null) {
+      if (sleepMins >= 420) add('7+ hours sleep', 'met', fmtMinsShort(sleepMins));
+      else if (sleepMins >= 360) add('7+ hours sleep', 'partial', fmtMinsShort(sleepMins));
+      else add('7+ hours sleep', 'missed', fmtMinsShort(sleepMins));
+    }
+
+    // Sleep efficiency
+    if (sleepEfficiency != null) {
+      if (sleepEfficiency >= 85) add('Sleep efficiency ≥ 85%', 'met', sleepEfficiency + '%');
+      else add('Sleep efficiency ≥ 85%', 'missed', sleepEfficiency + '%');
+    }
+
+    // Active Zone Minutes
+    if (azm != null) {
+      if (azm >= 22) add('Active Zone Minutes goal', 'met', azm + ' min');
+      else add('Active Zone Minutes goal', 'missed', azm + ' min');
+    }
+
+    // Steps
+    if (steps != null) {
+      if (steps >= 10000) add('10k steps', 'met', steps.toLocaleString());
+      else if (steps >= 5000) add('10k steps', 'partial', steps.toLocaleString());
+      else add('10k steps', 'missed', steps.toLocaleString());
+    }
+
+    // RHR
+    if (rhr != null) {
+      if (rhr < 65) add('Resting HR optimal', 'met', rhr + ' bpm');
+      else if (rhr < 75) add('Resting HR optimal', 'partial', rhr + ' bpm');
+      else add('Resting HR optimal', 'missed', rhr + ' bpm');
+    }
+
+    // HRV
+    if (hrv != null) {
+      if (hrv >= 50) add('HRV optimal', 'met', Math.round(hrv) + ' ms');
+      else if (hrv >= 30) add('HRV optimal', 'partial', Math.round(hrv) + ' ms');
+      else add('HRV optimal', 'missed', Math.round(hrv) + ' ms');
+    }
+
+    // SpO2
+    if (spo2 != null) {
+      if (spo2 >= 95) add('Blood oxygen ≥ 95%', 'met', spo2.toFixed(1) + '%');
+      else add('Blood oxygen ≥ 95%', 'missed', spo2.toFixed(1) + '%');
+    }
+
+    return goals;
+  }
+
+  function renderGoals(goals) {
+    const grid = document.getElementById('goalsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    goals.forEach(g => {
+      const icon = g.state === 'met' ? '✓' : g.state === 'partial' ? '~' : '✗';
+      const chip = document.createElement('div');
+      chip.className = 'goal-chip ' + g.state;
+      chip.innerHTML = `
+        <span class="goal-chip-icon">${icon}</span>
+        <span class="goal-chip-label">${g.label}</span>
+        ${g.val != null ? `<span class="goal-chip-val">${g.val}</span>` : ''}
+      `;
+      grid.appendChild(chip);
+    });
+    show('goalsSection');
+  }
+
+  // ── Tips builder ───────────────────────────────────────────
+  function buildTips(data, goals) {
+    const { readiness, sleepMins, sleepEfficiency, azm, steps, rhr, hrv, spo2, temp } = data;
+    const tips = [];
+
+    const missedLabels = new Set(
+      goals.filter(g => g.state === 'missed' || g.state === 'partial').map(g => g.label)
+    );
+
+    if (readiness != null && readiness < 34) {
+      tips.push({ icon: '🔋', text: 'Prioritise 8h+ sleep tonight — your readiness recovers fastest with one good sleep.' });
+    }
+
+    if (sleepEfficiency != null && sleepEfficiency < 85) {
+      tips.push({ icon: '📵', text: 'Avoid screens 1h before bed and keep your room at 18–20°C to improve sleep efficiency.' });
+    }
+
+    if (steps != null && steps < 5000) {
+      tips.push({ icon: '🚶', text: 'A 20-min walk after lunch adds ~2,500 steps without extra gym time.' });
+    }
+
+    if (azm != null && azm < 22) {
+      tips.push({ icon: '🚴', text: '2×10-min Zone 2 cardio sessions (brisk walk, bike) easily hit the 22-min daily goal.' });
+    }
+
+    if (rhr != null && rhr >= 75) {
+      tips.push({ icon: '💧', text: 'Elevated resting HR is often dehydration or accumulated fatigue — hydrate and rest.' });
+    }
+
+    if (hrv != null && hrv < 30) {
+      tips.push({ icon: '📊', text: 'HRV drops 24–48h after alcohol, poor sleep, or overtraining. Prioritise recovery today.' });
+    }
+
+    if (spo2 != null && spo2 < 95) {
+      tips.push({ icon: '🫁', text: 'SpO₂ below 95% — avoid strenuous exercise and ensure your room is well ventilated.' });
+    }
+
+    if (temp != null && Math.abs(temp) > 0.5) {
+      tips.push({ icon: '🌡️', text: 'Elevated skin temperature can indicate illness onset — monitor closely and rest.' });
+    }
+
+    return tips.slice(0, 6);
+  }
+
+  function renderTips(tips, goals) {
+    const container = document.getElementById('tipList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const allMet = goals.length > 0 && goals.every(g => g.state === 'met');
+
+    if (allMet || tips.length === 0) {
+      const card = document.createElement('div');
+      card.className = 'tip-all-good';
+      card.innerHTML = '<span style="font-size:20px">🎯</span> All goals met — great day to train hard!';
+      container.appendChild(card);
+    } else {
+      tips.forEach(t => {
+        const item = document.createElement('div');
+        item.className = 'tip-item';
+        item.innerHTML = `<span class="tip-icon">${t.icon}</span><span>${t.text}</span>`;
+        container.appendChild(item);
+      });
+    }
+    show('tipsSection');
+  }
+
+  // ── Sparkline renderer ─────────────────────────────────────
+  function renderSparkline(intradayData) {
+    const lineEl = document.getElementById('sparklineLine');
+    if (!lineEl || !intradayData || !intradayData.length) return;
+    const vals = intradayData.map(p => p.value).filter(v => v > 0);
+    if (vals.length < 2) return;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const range = max - min || 1;
+    const W = 300, H = 36;
+    const points = vals.map((v, i) => {
+      const x = (i / (vals.length - 1)) * W;
+      const y = H - ((v - min) / range) * (H - 4) - 2;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    lineEl.setAttribute('points', points);
+  }
+
+  // ── Main render ────────────────────────────────────────────
+  function renderAll(rawData) {
+    const { sleepRes, actRes, hrRes, hrvRes, spo2Res, tempRes } = rawData;
+
+    // Extract primitives
+    let readiness = null;
+    let sleepMins = null;
+    let sleepEfficiency = null;
+    let remMins = null, deepMins = null, lightMins = null, awakeMins = null;
+    let azm = null, steps = null, calories = null;
+    let rhr = null;
+    let hrv = null;
+    let spo2 = null;
+    let temp = null;
+    let intradayHr = null;
+
+    // Sleep
+    if (sleepRes && sleepRes.sleep && sleepRes.sleep.length) {
+      const main = sleepRes.sleep.find(s => s.isMainSleep) || sleepRes.sleep[0];
+      sleepMins = main.minutesAsleep || null;
+      sleepEfficiency = main.efficiency || null;
+      const lv = (main.levels && main.levels.summary) || {};
+      remMins   = (lv.rem   && lv.rem.minutes)   || 0;
+      deepMins  = (lv.deep  && lv.deep.minutes)  || 0;
+      lightMins = (lv.light && lv.light.minutes) || 0;
+      awakeMins = (lv.wake  && lv.wake.minutes)  || 0;
+    }
+
+    // Activity
+    if (actRes && actRes.summary) {
+      const s = actRes.summary;
+      azm = (s.veryActiveMinutes || 0) + (s.fairlyActiveMinutes || 0);
+      steps = s.steps || 0;
+      calories = s.caloriesOut || null;
+    }
+
+    // Heart rate
+    if (hrRes) {
+      const day = hrRes['activities-heart'] && hrRes['activities-heart'][0];
+      if (day && day.value) rhr = day.value.restingHeartRate || null;
+      const intraday = hrRes['activities-heart-intraday'] && hrRes['activities-heart-intraday'].dataset;
+      if (intraday && intraday.length) intradayHr = intraday;
+    }
+
+    // Simulate readiness from available data (Fitbit doesn't have a dedicated readiness endpoint for free accounts)
+    // Compute a weighted score: rhr weight 30%, sleep efficiency 30%, sleep duration 20%, hrv 20%
+    if (hrvRes && hrvRes.hrv && hrvRes.hrv.length) {
+      const v = hrvRes.hrv[0].value;
+      hrv = (v && v.dailyRmssd) != null ? v.dailyRmssd : null;
+    }
+    if (spo2Res && spo2Res.value && spo2Res.value.avg != null) spo2 = spo2Res.value.avg;
+    if (tempRes && tempRes.tempSkin && tempRes.tempSkin.length) {
+      const v = tempRes.tempSkin[0].value;
+      temp = (v && v.nightlyRelative) != null ? v.nightlyRelative : null;
+    }
+
+    // Compute readiness approximation
+    {
+      let score = 0; let weight = 0;
+      if (rhr != null) {
+        // rhr: < 55 = 100, 55-64 = 80, 65-74 = 50, ≥75 = 20
+        const rhrScore = rhr < 55 ? 100 : rhr < 65 ? 80 : rhr < 75 ? 50 : 20;
+        score += rhrScore * 0.30; weight += 0.30;
+      }
+      if (sleepEfficiency != null) {
+        // efficiency 0-100 maps directly
+        score += sleepEfficiency * 0.30; weight += 0.30;
+      }
+      if (sleepMins != null) {
+        // 480+ min = 100, 420 = 80, 360 = 55, < 360 = 25
+        const sScore = sleepMins >= 480 ? 100 : sleepMins >= 420 ? 80 : sleepMins >= 360 ? 55 : 25;
+        score += sScore * 0.20; weight += 0.20;
+      }
+      if (hrv != null) {
+        // hrv ≥50 = 100, 30-49 = 70, 15-29 = 40, <15 = 15
+        const hScore = hrv >= 50 ? 100 : hrv >= 30 ? 70 : hrv >= 15 ? 40 : 15;
+        score += hScore * 0.20; weight += 0.20;
+      }
+      if (weight > 0) readiness = Math.round(score / weight);
+    }
+
+    const metricsData = { readiness, sleepMins, sleepEfficiency, azm, steps, rhr, hrv, spo2, temp };
+
+    // ── Render Recovery ring ──
+    if (readiness != null) {
+      const ringEl = document.getElementById('readinessRing');
+      const col = ringColor(readiness);
+      ringEl.style.strokeDashoffset = String(603.19 * (1 - readiness / 100));
+      ringEl.style.stroke = col;
+      document.getElementById('readinessNum').textContent = readiness;
+      document.getElementById('readinessNum').style.color = col;
+      const lbl = readiness >= 67 ? 'Optimal' : readiness >= 34 ? 'Good' : readiness >= 20 ? 'Fair' : 'Low';
+      const verdictEl = document.getElementById('readinessVerdict');
+      verdictEl.textContent = lbl;
+      verdictEl.style.color = col;
+
+      // Verdict card
+      const zone = readiness >= 67 ? 'high' : readiness >= 34 ? 'mid' : 'low';
+      const headlines = {
+        high: 'Your body is primed — push hard today.',
+        mid:  'Moderate capacity — steady effort is smart.',
+        low:  'Recovery day. Let your body rebuild.',
+      };
+      const badgeMap = {
+        high: { text: 'PUSH',     bg: 'rgba(66,133,244,0.15)', border: 'rgba(66,133,244,0.40)', color: '#4285F4' },
+        mid:  { text: 'MODERATE', bg: 'rgba(242,192,99,0.15)', border: 'rgba(242,192,99,0.40)', color: '#F2C063' },
+        low:  { text: 'REST',     bg: 'rgba(255,138,138,0.15)', border: 'rgba(255,138,138,0.40)', color: '#FF8A8A' },
+      };
+      const bc = badgeMap[zone];
+      const badge = document.getElementById('verdictBadge');
+      badge.textContent = bc.text;
+      badge.style.background = bc.bg;
+      badge.style.borderColor = bc.border;
+      badge.style.color = bc.color;
+      document.getElementById('verdictHeadline').textContent = headlines[zone];
+
+      const reasons = [];
+      if (sleepMins != null) reasons.push('Sleep: ' + fmtMinsShort(sleepMins));
+      if (sleepEfficiency != null) reasons.push('Efficiency: ' + sleepEfficiency + '%');
+      if (hrv != null) reasons.push('HRV: ' + Math.round(hrv) + ' ms');
+      if (rhr != null) reasons.push('RHR: ' + rhr + ' bpm');
+      document.getElementById('verdictReasons').textContent = reasons.join('  ·  ');
+      show('verdictCard');
+      show('recoverySection');
+    }
+
+    // ── Render Sleep ──
+    if (sleepMins != null) {
+      const hrs = (sleepMins / 60).toFixed(1);
+      document.getElementById('sleepHours').textContent = hrs;
+      document.getElementById('sleepEfficiency').textContent = sleepEfficiency != null ? sleepEfficiency + '%' : '—';
+
+      const tot = (remMins + deepMins + lightMins + awakeMins) || 1;
+      document.getElementById('segRem').style.width   = pct(remMins, tot) + '%';
+      document.getElementById('segDeep').style.width  = pct(deepMins, tot) + '%';
+      document.getElementById('segLight').style.width = pct(lightMins, tot) + '%';
+      document.getElementById('segAwake').style.width = pct(awakeMins, tot) + '%';
+      document.getElementById('lblRem').textContent   = fmtMinsShort(remMins);
+      document.getElementById('lblDeep').textContent  = fmtMinsShort(deepMins);
+      document.getElementById('lblLight').textContent = fmtMinsShort(lightMins);
+      document.getElementById('lblAwake').textContent = fmtMinsShort(awakeMins);
+      show('stagesBar');
+
+      // 2×2 tiles
+      document.getElementById('tileRem').textContent   = fmtMinsShort(remMins);
+      document.getElementById('tileDeep').textContent  = fmtMinsShort(deepMins);
+      document.getElementById('tileLight').textContent = fmtMinsShort(lightMins);
+      document.getElementById('tileAwake').textContent = fmtMinsShort(awakeMins);
+      document.getElementById('tileRemPct').textContent   = pct(remMins, tot) + '% of total';
+      document.getElementById('tileDeepPct').textContent  = pct(deepMins, tot) + '% of total';
+      document.getElementById('tileLightPct').textContent = pct(lightMins, tot) + '% of total';
+      document.getElementById('tileAwakePct').textContent = pct(awakeMins, tot) + '% of total';
+      show('sleepTiles');
+      show('sleepSection');
+    }
+
+    // ── Render Activity ──
+    if (azm != null || steps != null || calories != null) {
+      if (azm != null) {
+        document.getElementById('azmVal').textContent = azm;
+        document.getElementById('azmBar').style.width = Math.min(100, pct(azm, 22)) + '%';
+      }
+      if (steps != null) {
+        document.getElementById('stepsVal').textContent = steps >= 1000 ? (steps / 1000).toFixed(1) + 'k' : steps;
+        document.getElementById('stepsBar').style.width = Math.min(100, pct(steps, 10000)) + '%';
+      }
+      if (calories != null) {
+        document.getElementById('calsVal').textContent = calories.toLocaleString();
+        document.getElementById('calsBar').style.width = Math.min(100, pct(calories, 2500)) + '%';
+      }
+      show('activitySection');
+    }
+
+    // ── Render Heart & Body ──
+    let heartVisible = false;
+    if (rhr != null) {
+      document.getElementById('rhrVal').textContent = rhr;
+      setZone('zoneRhr', zoneClass('rhr', rhr));
+      heartVisible = true;
+      if (intradayHr) renderSparkline(intradayHr);
+    }
+    if (hrv != null) {
+      document.getElementById('hrvVal').textContent = Math.round(hrv);
+      document.getElementById('hrvSub').textContent = zoneClass('hrv', hrv) === 'z-good' ? 'Optimal range' : zoneClass('hrv', hrv) === 'z-norm' ? 'Normal range' : 'Below optimal';
+      setZone('zoneHrv', zoneClass('hrv', hrv));
+      heartVisible = true;
+    }
+    if (spo2 != null) {
+      document.getElementById('spo2Val').textContent = spo2.toFixed(1);
+      document.getElementById('spo2Sub').textContent = spo2 >= 95 ? 'Normal range' : 'Below normal';
+      setZone('zoneSpo2', zoneClass('spo2', spo2));
+      heartVisible = true;
+    }
+    if (temp != null) {
+      document.getElementById('tempVal').textContent = (temp > 0 ? '+' : '') + temp.toFixed(2);
+      const tc = zoneClass('temp', temp);
+      document.getElementById('tempSub').textContent = tc === 'z-good' ? 'Normal baseline' : tc === 'z-warn' ? 'Slightly elevated' : 'Elevated — monitor';
+      setZone('zoneTemp', tc);
+      show('tempTile');
+      heartVisible = true;
+    }
+    if (heartVisible) show('heartSection');
+
+    // ── Goals + tips ──
+    const goals = buildGoals(metricsData);
+    renderGoals(goals);
+    const tips = buildTips(metricsData, goals);
+    renderTips(tips, goals);
+
+    // ── Last updated ──
+    const now = Date.now();
+    localStorage.setItem(SYNC_KEY, String(now));
+    const timeStr = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const el = document.getElementById('lastUpdated');
+    if (el) { el.textContent = 'Last updated ' + timeStr; el.style.display = ''; }
+  }
+
+  // ── Load all data ──────────────────────────────────────────
+  async function loadData() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) refreshBtn.classList.add('spinning');
+
+    const date = todayStr();
+    try {
+      const [sleepR, actR, hrR, hrvR, spo2R, tempR] = await Promise.allSettled([
+        fbFetch('/1.2/user/-/sleep/date/' + date + '.json'),
+        fbFetch('/1/user/-/activities/date/' + date + '.json'),
+        fbFetch('/1/user/-/activities/heart/date/' + date + '/1d/1min.json'),
+        fbFetch('/1/user/-/hrv/date/' + date + '.json'),
+        fbFetch('/1/user/-/spo2/date/' + date + '.json'),
+        fbFetch('/1/user/-/temp/skin/date/' + date + '.json'),
+      ]);
+
+      const val = r => r.status === 'fulfilled' ? r.value : null;
+
+      renderAll({
+        sleepRes: val(sleepR),
+        actRes:   val(actR),
+        hrRes:    val(hrR),
+        hrvRes:   val(hrvR),
+        spo2Res:  val(spo2R),
+        tempRes:  val(tempR),
+      });
+
+    } catch (e) {
+      // Token expired during one of the requests
+      if (e.message === 'not_authed' || e.message === 'token_expired') {
+        hide('goalsSection');
+        hide('recoverySection');
+        hide('sleepSection');
+        hide('activitySection');
+        hide('heartSection');
+        hide('tipsSection');
+        show('notConnected');
+      }
+    } finally {
+      if (refreshBtn) refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  function init() {
+    // Check for OAuth callback
+    parseCallback();
+
+    const tok = getToken();
+    if (!tok) {
+      show('notConnected');
+      return;
+    }
+
+    // Show last sync timestamp while loading
+    const lastSync = parseInt(localStorage.getItem(SYNC_KEY) || '0', 10);
+    if (lastSync) {
+      const minAgo = Math.round((Date.now() - lastSync) / 60000);
+      const el = document.getElementById('lastUpdated');
+      if (el) {
+        el.textContent = 'Last updated ' + minAgo + ' min ago';
+        el.style.display = '';
+      }
+    }
+
+    loadData();
+
+    document.getElementById('refreshBtn').addEventListener('click', function () {
+      const tok2 = getToken();
+      if (!tok2) { show('notConnected'); return; }
+      loadData();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
