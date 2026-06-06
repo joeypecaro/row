@@ -805,13 +805,25 @@ html, body {
     $('waterBarZoneStart').style.left = (65 / 1.5) + '%';
     $('waterBarZoneEnd').style.left   = (100 / 1.5) + '%';
 
-    // Helper text
+    // Helper text — time-aware pacing against 5 AM – 10 PM awake window
     const helper = $('waterHelper');
-    if (count === 0) { helper.textContent = 'Start the day — first one in.'; helper.classList.remove('good'); }
-    else if (pctRaw < 50) { helper.textContent = 'Behind pace — drink one in the next hour.'; helper.classList.remove('good'); }
-    else if (pctRaw < 100) { helper.textContent = (targetUnits - count) + ' to go. Pacing well.'; helper.classList.remove('good'); }
-    else if (pctRaw < 130) { helper.textContent = '✓ Target hit — top up if you train this evening.'; helper.classList.add('good'); }
-    else { helper.textContent = 'Strong — way past target.'; helper.classList.add('good'); }
+    const _nowH = new Date().getHours() + new Date().getMinutes() / 60;
+    const _wakeH = 5, _sleepH = 22, _dayLen = _sleepH - _wakeH;
+    const _elapsed = Math.max(0, Math.min(_dayLen, _nowH - _wakeH));
+    const _expectedPct = (_elapsed / _dayLen) * 100;
+    const _onPace = pctRaw >= _expectedPct * 0.80;
+    if (count === 0 && _nowH < _wakeH + 1) {
+      helper.textContent = 'Start the day — first one in.'; helper.classList.remove('good');
+    } else if (!_onPace && pctRaw < 100) {
+      const _behind = Math.max(1, Math.ceil((_expectedPct / 100 * targetUnits) - count));
+      helper.textContent = 'Behind pace — ' + (_behind === 1 ? 'drink one now' : 'drink ' + _behind + ' to catch up') + '.'; helper.classList.remove('good');
+    } else if (pctRaw < 100) {
+      helper.textContent = (targetUnits - count) + ' to go. Pacing well.'; helper.classList.remove('good');
+    } else if (pctRaw < 130) {
+      helper.textContent = '✓ Target hit — top up if you train this evening.'; helper.classList.add('good');
+    } else {
+      helper.textContent = 'Strong — way past target.'; helper.classList.add('good');
+    }
 
     // Disable minus when at zero
     $('waterMinusBtn').disabled = count <= 0;

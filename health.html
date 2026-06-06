@@ -467,7 +467,7 @@ main {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 
 /* ============================================================
-   FITBIT WIDGET
+   GOOGLE HEALTH WIDGET
    ============================================================ */
 .fitbit-section { margin-bottom: 36px; }
 .fitbit-card {
@@ -496,11 +496,11 @@ main {
   font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
   margin: 0 0 6px; color: var(--text-primary);
 }
-.fitbit-setup-card h2 em { color: #00B0B9; font-style: normal; }
+.fitbit-setup-card h2 em { color: #1A73E8; font-style: normal; }
 .fitbit-setup-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0 0 18px; }
 .fitbit-setup-card ol { padding-left: 18px; margin: 14px 0 18px; }
 .fitbit-setup-card li { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.5; }
-.fitbit-setup-card li code { background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 11.5px; color: #00B0B9; }
+.fitbit-setup-card li code { background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 11.5px; color: #1A73E8; }
 .fitbit-setup-card label { display: block; font-size: 11px; letter-spacing: 0.14em; color: var(--text-tertiary); text-transform: uppercase; margin: 14px 0 6px; font-weight: 600; }
 .fitbit-setup-card input {
   width: 100%; box-sizing: border-box; padding: 11px 13px;
@@ -508,15 +508,15 @@ main {
   border-radius: 10px; color: var(--text-primary); font: inherit; font-size: 13px;
   font-family: var(--font-mono); outline: none;
 }
-.fitbit-setup-card input:focus { border-color: #00B0B9; }
+.fitbit-setup-card input:focus { border-color: #1A73E8; }
 .fitbit-setup-actions { display: flex; gap: 10px; margin-top: 22px; }
 .fitbit-setup-actions button {
   flex: 1; padding: 12px 18px; border-radius: 10px;
-  background: rgba(0,176,185,0.15); border: 1px solid rgba(0,176,185,0.35);
-  color: #00B0B9; font: inherit; font-weight: 600; font-size: 13px;
+  background: rgba(26,115,232,0.15); border: 1px solid rgba(26,115,232,0.35);
+  color: #1A73E8; font: inherit; font-weight: 600; font-size: 13px;
   cursor: pointer; transition: background 0.2s, transform 0.15s; letter-spacing: 0.04em;
 }
-.fitbit-setup-actions button:hover { background: rgba(0,176,185,0.28); }
+.fitbit-setup-actions button:hover { background: rgba(26,115,232,0.28); }
 .fitbit-setup-actions button:active { transform: scale(0.98); }
 .fitbit-setup-actions button.sec { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--text-secondary); }
 .fitbit-cfg-btn {
@@ -532,10 +532,10 @@ main {
 .fitbit-brand { display: inline-flex; align-items: center; gap: 8px; }
 .fitbit-brand-mark {
   width: 24px; height: 24px; border-radius: 8px;
-  background: linear-gradient(135deg, #00B0B9, #00D4D9);
+  background: linear-gradient(135deg, #1A73E8, #4285F4);
   color: #fff; font-weight: 900; font-size: 13px;
   display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 14px rgba(0,176,185,0.35);
+  box-shadow: 0 0 14px rgba(26,115,232,0.35);
 }
 .fitbit-brand-text { font-weight: 800; font-size: 13px; letter-spacing: 0.16em; color: var(--text-primary); }
 /* Disconnected */
@@ -549,19 +549,19 @@ main {
 .fitbit-connect-btn {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 22px; border-radius: 999px;
-  border: 1px solid rgba(0,176,185,0.50);
-  background: linear-gradient(180deg, rgba(0,176,185,0.22) 0%, rgba(0,176,185,0.12) 100%);
-  color: #00D4D9; font: inherit; font-size: 13.5px; font-weight: 700;
+  border: 1px solid rgba(26,115,232,0.50);
+  background: linear-gradient(180deg, rgba(26,115,232,0.22) 0%, rgba(26,115,232,0.12) 100%);
+  color: #4285F4; font: inherit; font-size: 13.5px; font-weight: 700;
   cursor: pointer; transition: transform 0.12s, box-shadow 0.18s;
-  box-shadow: 0 0 22px rgba(0,176,185,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 0 22px rgba(26,115,232,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
 }
-.fitbit-connect-btn:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(0,176,185,0.30), inset 0 1px 0 rgba(255,255,255,0.08); }
+.fitbit-connect-btn:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(26,115,232,0.30), inset 0 1px 0 rgba(255,255,255,0.08); }
 .fitbit-connect-btn:active { transform: scale(0.98); }
 .fitbit-auth-status { font-size: 11px; color: var(--text-tertiary); margin-top: 10px; min-height: 14px; font-style: italic; }
 /* Connected header */
 .fitbit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-.fitbit-live-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #00B0B9; margin-left: 4px; }
-.fitbit-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #00B0B9; box-shadow: 0 0 8px rgba(0,176,185,0.65); animation: fbt-pulse 1.6s ease-in-out infinite; }
+.fitbit-live-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #1A73E8; margin-left: 4px; }
+.fitbit-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #1A73E8; box-shadow: 0 0 8px rgba(26,115,232,0.65); animation: fbt-pulse 1.6s ease-in-out infinite; }
 @keyframes fbt-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
 .fitbit-header-right { display: flex; align-items: center; gap: 10px; }
 .fitbit-updated { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
@@ -576,10 +576,10 @@ main {
 .fitbit-refresh-btn:active { transform: rotate(180deg); }
 /* Hero ring */
 .fitbit-ring-wrap { position: relative; width: 220px; max-width: 76%; margin: 0 auto 24px; aspect-ratio: 1; }
-.fitbit-ring { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 20px rgba(0,176,185,0.10)); }
+.fitbit-ring { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 20px rgba(26,115,232,0.10)); }
 .fitbit-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 12; }
 .fitbit-ring-fill {
-  fill: none; stroke: #00B0B9; stroke-width: 12; stroke-linecap: round;
+  fill: none; stroke: #1A73E8; stroke-width: 12; stroke-linecap: round;
   stroke-dasharray: 603.19; stroke-dashoffset: 603.19;
   transition: stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1), stroke 0.4s, filter 0.4s;
 }
@@ -594,14 +594,14 @@ main {
 .fitbit-stages-meta { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
 .fitbit-stages-bar { display: flex; height: 10px; background: rgba(255,255,255,0.04); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
 .fitbit-stage { height: 100%; transition: width 0.7s cubic-bezier(0.22,1,0.36,1); }
-.fitbit-stage-rem   { background: #00B0B9; }
+.fitbit-stage-rem   { background: #1A73E8; }
 .fitbit-stage-deep  { background: #7DD3FC; }
 .fitbit-stage-light { background: #76746E; }
 .fitbit-stage-wake  { background: #38362F; }
 .fitbit-stages-legend { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .fitbit-stages-leg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 .fitbit-stage-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.fsd-rem   { background: #00B0B9; }
+.fsd-rem   { background: #1A73E8; }
 .fsd-deep  { background: #7DD3FC; }
 .fsd-light { background: #76746E; }
 .fsd-wake  { background: #38362F; border: 1px solid rgba(255,255,255,0.15); }
@@ -624,7 +624,7 @@ main {
 @media (max-width: 380px) { .fitbit-bio { grid-template-columns: 1fr; } }
 /* Zone dots */
 .fitbit-zone { position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.12); transition: background 0.3s, box-shadow 0.3s; }
-.fitbit-zone.z-good { background: #00B0B9; box-shadow: 0 0 7px rgba(0,176,185,0.55); }
+.fitbit-zone.z-good { background: #1A73E8; box-shadow: 0 0 7px rgba(26,115,232,0.55); }
 .fitbit-zone.z-norm { background: rgba(255,255,255,0.30); }
 .fitbit-zone.z-warn { background: #F2C063; box-shadow: 0 0 7px rgba(242,192,99,0.55); }
 .fitbit-zone.z-bad  { background: #FF8A8A; box-shadow: 0 0 7px rgba(255,138,138,0.55); }
@@ -633,7 +633,7 @@ main {
 .fitbit-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.04em; }
 .fitbit-legend .fitbit-zone { position: static; display: inline-block; }
 /* Verdict */
-.fitbit-verdict { margin-top: 18px; padding: 16px 18px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05); border-left: 2px solid rgba(0,176,185,0.45); border-radius: 0 12px 12px 0; }
+.fitbit-verdict { margin-top: 18px; padding: 16px 18px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05); border-left: 2px solid rgba(26,115,232,0.45); border-radius: 0 12px 12px 0; }
 .fitbit-verdict-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .fitbit-verdict-eyebrow { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.18em; font-weight: 700; }
 .fitbit-verdict-badge { font-size: 9.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.14em; text-transform: uppercase; border: 1px solid; }
@@ -648,18 +648,18 @@ main {
 
 <main>
 
-<!-- ===== FITBIT SETUP OVERLAY ===== -->
+<!-- ===== GOOGLE HEALTH SETUP OVERLAY ===== -->
 <div id="fitbitOverlay" class="fitbit-overlay">
   <div class="fitbit-setup-card">
-    <h2>Connect your <em>Fitbit</em>.</h2>
-    <p>No backend needed — this uses Fitbit's OAuth implicit flow directly in the browser. You'll need a free Fitbit developer app.</p>
+    <h2>Connect <em>Google Health</em>.</h2>
+    <p>Reads your Fitbit Air data via the Fitbit Web API — no backend needed. You'll need a free Fitbit developer app (Google account required).</p>
     <ol>
-      <li>Go to <code>dev.fitbit.com</code> → Create App</li>
+      <li>Sign in at <code>dev.fitbit.com</code> with your Google / Fitbit account → Create App</li>
       <li>Set <em>OAuth 2.0 Application Type</em> to <code>Personal</code></li>
       <li>Set <em>Callback URL</em> to the full URL of this page (e.g. <code>https://your-site.vercel.app/health.html</code>)</li>
       <li>Copy your <code>OAuth 2.0 Client ID</code> and paste it below</li>
     </ol>
-    <label>Fitbit OAuth 2.0 Client ID</label>
+    <label>Fitbit / Google OAuth 2.0 Client ID</label>
     <input id="fitbitClientIdInput" type="text" placeholder="23ABCD" autocomplete="off" spellcheck="false">
     <div class="fitbit-setup-actions">
       <button class="sec" id="fitbitSkipBtn" type="button">Skip for now</button>
@@ -668,9 +668,9 @@ main {
   </div>
 </div>
 
-<!-- ===== FITBIT SECTION ===== -->
+<!-- ===== GOOGLE HEALTH SECTION ===== -->
 <section class="fitbit-section" style="position:relative">
-  <div class="section-title">Fitbit</div>
+  <div class="section-title">Google Health</div>
   <button class="fitbit-cfg-btn" id="fitbitCfgBtn" aria-label="Fitbit settings" title="Fitbit settings" type="button">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
@@ -679,12 +679,12 @@ main {
     <!-- DISCONNECTED -->
     <div id="fitbitDisc" class="fitbit-disc">
       <div class="fitbit-brand">
-        <span class="fitbit-brand-mark">F</span>
-        <span class="fitbit-brand-text">FITBIT</span>
+        <span class="fitbit-brand-mark">G</span>
+        <span class="fitbit-brand-text">GOOGLE HEALTH</span>
       </div>
       <div class="fitbit-disc-title">Not connected</div>
-      <div class="fitbit-disc-sub">Link your account to see live readiness, sleep, and activity data.</div>
-      <button id="fitbitConnectBtn" class="fitbit-connect-btn" type="button">Connect Fitbit →</button>
+      <div class="fitbit-disc-sub">Link your Fitbit Air to see live readiness, sleep, and activity data.</div>
+      <button id="fitbitConnectBtn" class="fitbit-connect-btn" type="button">Connect Google Health →</button>
       <div id="fitbitAuthStatus" class="fitbit-auth-status"></div>
     </div>
 
@@ -692,8 +692,8 @@ main {
     <div id="fitbitConn" class="fitbit-conn" style="display:none">
       <div class="fitbit-header">
         <div class="fitbit-brand">
-          <span class="fitbit-brand-mark">F</span>
-          <span class="fitbit-brand-text">FITBIT</span>
+          <span class="fitbit-brand-mark">G</span>
+          <span class="fitbit-brand-text">GOOGLE HEALTH</span>
           <span class="fitbit-live-tag"><span class="fitbit-live-dot"></span>live</span>
         </div>
         <div class="fitbit-header-right">
@@ -1373,7 +1373,7 @@ main {
 
 <script>
 /* ============================================================
-   FITBIT WIDGET — OAuth implicit grant + Web API
+   GOOGLE HEALTH WIDGET — OAuth implicit grant + Web API
    ============================================================ */
 (function () {
   'use strict';
@@ -1457,8 +1457,8 @@ main {
     }
   }
   function ringColor(readiness) {
-    if (readiness == null) return '#00B0B9';
-    if (readiness >= 67) return '#00B0B9';
+    if (readiness == null) return '#1A73E8';
+    if (readiness >= 67) return '#4285F4';
     if (readiness >= 34) return '#F2C063';
     return '#FF8A8A';
   }
@@ -1575,7 +1575,7 @@ main {
         low:  'Recovery day. Let your body rebuild.',
       };
       const badgeColors = {
-        high: { bg: 'rgba(0,176,185,0.15)', border: 'rgba(0,176,185,0.40)', color: '#00D4D9' },
+        high: { bg: 'rgba(66,133,244,0.15)', border: 'rgba(66,133,244,0.40)', color: '#4285F4' },
         mid:  { bg: 'rgba(242,192,99,0.15)', border: 'rgba(242,192,99,0.40)', color: '#F2C063' },
         low:  { bg: 'rgba(255,138,138,0.15)', border: 'rgba(255,138,138,0.40)', color: '#FF8A8A' },
       };
