@@ -493,6 +493,38 @@ main {
 /* ============================================================
    NUTRITION TRACKER
    ============================================================ */
+.nutr-targets-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+.nutr-targets { display: flex; gap: 0; flex: 1; padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; }
+.nutr-target { text-align: center; flex: 1; padding: 0 6px; border-right: 1px solid rgba(255,255,255,0.06); }
+.nutr-target:last-child { border-right: 0; }
+.nutr-target-num { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; }
+.nutr-target-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 4px; }
+.nutr-info-btn {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; margin-top: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-tertiary); font-size: 15px; cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.nutr-info-btn:hover, .nutr-info-btn.active { background: rgba(107,227,164,0.10); border-color: rgba(107,227,164,0.25); color: #6BE3A4; }
+.nutr-calc-panel {
+  margin-bottom: 18px; padding: 14px 16px;
+  background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+}
+.nutr-calc-badge {
+  display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
+  background: rgba(255,255,255,0.06); color: var(--text-tertiary); border: 1px solid rgba(255,255,255,0.08);
+}
+.nutr-calc-badge.good { background: rgba(107,227,164,0.10); color: #6BE3A4; border-color: rgba(107,227,164,0.25); }
+.nutr-calc-badge.warn { background: rgba(242,192,99,0.10); color: var(--warning); border-color: rgba(242,192,99,0.25); }
+.nutr-calc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.nutr-calc-row:last-of-type { border-bottom: 0; }
+.nutr-calc-label { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; max-width: 48%; }
+.nutr-calc-val { font-size: 11px; color: var(--text-secondary); text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.nutr-calc-val strong { color: var(--text-primary); }
+.nutr-calc-note { font-size: 11px; color: var(--text-tertiary); font-style: italic; padding: 6px 0 2px; line-height: 1.5; }
+.nutr-calc-sources { font-size: 10px; color: var(--text-quaternary); margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04); line-height: 1.6; }
 .nutr-goals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
 .nutr-field { display: flex; flex-direction: column; gap: 5px; }
 .nutr-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
@@ -503,12 +535,9 @@ main {
   transition: border-color 0.2s;
 }
 .nutr-input:focus { border-color: rgba(255,255,255,0.28); }
-.nutr-targets { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; }
-.nutr-target { text-align: center; flex: 1; min-width: 70px; }
-.nutr-target-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; }
-.nutr-target-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 3px; }
 .nutr-log-section { padding-top: 16px; border-top: 1px solid var(--border-soft); margin-bottom: 14px; }
-.nutr-log-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.nutr-macros-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.nutr-body-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .nutr-save-btn {
   width: 100%; padding: 11px; border: 0; border-radius: 10px;
   background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
@@ -518,22 +547,21 @@ main {
 }
 .nutr-save-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .nutr-saved-note { font-size: 12px; color: var(--text-tertiary); text-align: center; margin-top: 8px; min-height: 18px; transition: opacity 0.3s; }
-.nutr-today-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-.nutr-bar-item { }
-.nutr-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.nutr-today-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+.nutr-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .nutr-bar-key { font-size: 11px; font-weight: 700; color: var(--text-primary); }
-.nutr-bar-val { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
-.nutr-bar-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
-.nutr-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+.nutr-bar-val { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.nutr-bar-track { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.nutr-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.22,1,0.36,1), background 0.3s; }
 .nutr-charts { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-soft); }
 .nutr-chart-section { margin-bottom: 18px; }
 .nutr-chart-eyebrow { font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
 .nutr-chart-wrap { overflow: hidden; border-radius: 6px; }
 .nutr-chart-wrap svg { display: block; width: 100%; height: 56px; }
 @media (max-width: 540px) {
-  .nutr-goals-grid { grid-template-columns: 1fr; }
-  .nutr-log-row { grid-template-columns: 1fr 1fr; }
+  .nutr-goals-grid, .nutr-macros-grid, .nutr-body-grid { grid-template-columns: 1fr; }
   .nutr-today-bars { grid-template-columns: 1fr; }
+  .nutr-target-num { font-size: 17px; }
 }
 </style>
 </head>
@@ -602,24 +630,35 @@ main {
   <section id="nutrition" style="margin-bottom:36px">
     <div class="section-title">Nutrition</div>
     <div class="stack-card">
-      <!-- TDEE + targets -->
-      <div id="nutrTargets" class="nutr-targets">
-        <div class="nutr-target">
-          <div class="nutr-target-num" id="nutrTdee">—</div>
-          <div class="nutr-target-lbl">TDEE kcal</div>
+
+      <!-- Targets + info button -->
+      <div class="nutr-targets-row">
+        <div class="nutr-targets">
+          <div class="nutr-target">
+            <div class="nutr-target-num" id="nutrTdee">—</div>
+            <div class="nutr-target-lbl">TDEE</div>
+          </div>
+          <div class="nutr-target">
+            <div class="nutr-target-num" id="nutrCalTarget">—</div>
+            <div class="nutr-target-lbl">Goal kcal</div>
+          </div>
+          <div class="nutr-target">
+            <div class="nutr-target-num" id="nutrProtTarget">—</div>
+            <div class="nutr-target-lbl">Protein</div>
+          </div>
+          <div class="nutr-target">
+            <div class="nutr-target-num" id="nutrGoalWeight">—</div>
+            <div class="nutr-target-lbl">Goal kg</div>
+          </div>
         </div>
-        <div class="nutr-target">
-          <div class="nutr-target-num" id="nutrCalTarget">—</div>
-          <div class="nutr-target-lbl">Goal kcal</div>
-        </div>
-        <div class="nutr-target">
-          <div class="nutr-target-num" id="nutrProtTarget">—</div>
-          <div class="nutr-target-lbl">Protein g</div>
-        </div>
-        <div class="nutr-target">
-          <div class="nutr-target-num" id="nutrGoalWeight">—</div>
-          <div class="nutr-target-lbl">Goal kg</div>
-        </div>
+        <button class="nutr-info-btn" id="nutrInfoBtn" type="button" title="How are these calculated?">ⓘ</button>
+      </div>
+
+      <!-- Calculation explanation panel (hidden by default) -->
+      <div class="nutr-calc-panel" id="nutrCalcPanel" hidden>
+        <div class="nutr-calc-badge" id="nutrCalcBadge"></div>
+        <div id="nutrCalcSteps"></div>
+        <div class="nutr-calc-sources">Sources: Mifflin-St Jeor (1990); Katch-McArdle (1996); Protein targets per Helms et al. 2.0–2.4 g/kg LBM for natural athletes; Calorie deficit/surplus per ISSN position stand.</div>
       </div>
 
       <!-- Goal settings -->
@@ -636,7 +675,7 @@ main {
           <label class="nutr-lbl" for="nutrPhase">Phase</label>
           <select class="nutr-input" id="nutrPhase">
             <option value="maintain">Maintain</option>
-            <option value="cut">Cut (−300 kcal)</option>
+            <option value="cut">Cut (−400 kcal)</option>
             <option value="bulk">Bulk (+300 kcal)</option>
           </select>
         </div>
@@ -649,25 +688,25 @@ main {
       <!-- Today's log -->
       <div class="nutr-log-section">
         <div class="nutr-lbl" style="margin-bottom:10px">Log today</div>
-        <div class="nutr-log-row">
+        <div class="nutr-macros-grid">
           <div class="nutr-field">
             <label class="nutr-lbl" for="nutrCal">Calories</label>
             <input class="nutr-input" id="nutrCal" type="number" placeholder="0">
           </div>
           <div class="nutr-field">
-            <label class="nutr-lbl" for="nutrProt">Protein g</label>
+            <label class="nutr-lbl" for="nutrProt">Protein (g)</label>
             <input class="nutr-input" id="nutrProt" type="number" placeholder="0">
           </div>
           <div class="nutr-field">
-            <label class="nutr-lbl" for="nutrCarbs">Carbs g</label>
+            <label class="nutr-lbl" for="nutrCarbs">Carbs (g)</label>
             <input class="nutr-input" id="nutrCarbs" type="number" placeholder="0">
           </div>
           <div class="nutr-field">
-            <label class="nutr-lbl" for="nutrFat">Fat g</label>
+            <label class="nutr-lbl" for="nutrFat">Fat (g)</label>
             <input class="nutr-input" id="nutrFat" type="number" placeholder="0">
           </div>
         </div>
-        <div class="nutr-log-row" style="grid-template-columns:1fr 1fr;">
+        <div class="nutr-body-grid">
           <div class="nutr-field">
             <label class="nutr-lbl" for="nutrWeight">Weight (kg)</label>
             <input class="nutr-input" id="nutrWeight" type="number" placeholder="—" step="0.1">
@@ -677,7 +716,7 @@ main {
             <input class="nutr-input" id="nutrBodyFat" type="number" placeholder="—" step="0.1">
           </div>
         </div>
-        <button class="nutr-save-btn" id="nutrSaveBtn">Save today</button>
+        <button class="nutr-save-btn" id="nutrSaveBtn" type="button">Save today</button>
         <div class="nutr-saved-note" id="nutrSavedNote"></div>
       </div>
 
@@ -688,7 +727,7 @@ main {
             <span class="nutr-bar-key">Calories</span>
             <span class="nutr-bar-val" id="nutrBarCalVal">—</span>
           </div>
-          <div class="nutr-bar-track"><div class="nutr-bar-fill" id="nutrBarCal" style="width:0%;background:#F2C063"></div></div>
+          <div class="nutr-bar-track"><div class="nutr-bar-fill" id="nutrBarCal" style="width:0%"></div></div>
         </div>
         <div class="nutr-bar-item">
           <div class="nutr-bar-header">
@@ -1252,8 +1291,8 @@ main {
 (function () {
   'use strict';
 
-  const LOGS_KEY   = 'nutrition:logs';
-  const GOALS_KEY  = 'nutrition:goals';
+  const LOGS_KEY  = 'nutrition:logs';
+  const GOALS_KEY = 'nutrition:goals';
 
   function today() {
     const d = new Date();
@@ -1267,160 +1306,243 @@ main {
     catch { return {}; }
   }
 
-  function calcTdee(profile) {
-    const kg = parseFloat(profile.weightKg) || 0;
-    const cm = parseFloat(profile.heightCm) || 0;
+  // ── BMR / TDEE ─────────────────────────────────────────────────────────────────
+  // Katch-McArdle when BF% known (LBM-based, most accurate for varied body compositions)
+  // Mifflin-St Jeor as fallback (best validated general formula, ±10% error)
+  function calcBmr(profile, currentBfPct) {
+    const kg  = parseFloat(profile.weightKg) || 0;
+    const cm  = parseFloat(profile.heightCm) || 0;
     const age = parseInt(profile.age) || 0;
     const sex = profile.sex || 'male';
-    if (!kg || !cm || !age) return null;
-    const bmr = sex === 'female'
-      ? 10 * kg + 6.25 * cm - 5 * age - 161
-      : 10 * kg + 6.25 * cm - 5 * age + 5;
+    if (!kg || !cm || !age) return { bmr: null, method: null, lbm: null };
+    const bf = parseFloat(currentBfPct);
+    if (bf > 0 && bf < 70) {
+      const lbm = parseFloat((kg * (1 - bf / 100)).toFixed(2));
+      return { bmr: Math.round(370 + 21.6 * lbm), method: 'katch', lbm };
+    }
+    const base = 10 * kg + 6.25 * cm - 5 * age;
+    return { bmr: Math.round(sex === 'female' ? base - 161 : base + 5), method: 'mifflin', lbm: null };
+  }
+
+  function activityMult(profile) {
     const hrs = parseFloat(profile.activityHrsPerWeek) || 0;
-    const mult = hrs < 2 ? 1.2 : hrs < 5 ? 1.375 : hrs < 10 ? 1.55 : 1.725;
-    return Math.round(bmr * mult);
+    return hrs < 2 ? 1.20 : hrs < 5 ? 1.375 : hrs < 10 ? 1.55 : 1.725;
   }
 
-  function proteinTarget(goalKg, phase) {
-    const kg = parseFloat(goalKg) || 0;
-    if (!kg) return null;
-    const g = phase === 'bulk' ? 2.2 : phase === 'cut' ? 2.4 : 2.0;
-    return Math.round(kg * g);
+  // ── Protein target ─────────────────────────────────────────────────────────────
+  // LBM-based when available (avoids inflating targets for fat mass)
+  // Per Helms et al.: cut 2.4 g/kg LBM | maintain 1.8 | bulk 2.2
+  // Fallback goal weight: cut 2.0 | maintain 1.6 | bulk 1.8 g/kg
+  function calcProtein(phase, lbm, goalKg) {
+    const useLbm   = lbm != null && lbm > 0;
+    const refMass  = useLbm ? lbm : (parseFloat(goalKg) || 0);
+    if (!refMass) return { prot: null, perKg: null, refMass: null, unit: null };
+    const perKg = useLbm
+      ? (phase === 'cut' ? 2.4 : phase === 'bulk' ? 2.2 : 1.8)
+      : (phase === 'cut' ? 2.0 : phase === 'bulk' ? 1.8 : 1.6);
+    return { prot: Math.round(refMass * perKg), perKg, refMass: Math.round(refMass * 10) / 10, unit: useLbm ? 'LBM' : 'goal weight' };
   }
 
-  function renderTargets() {
+  // ── Central compute ────────────────────────────────────────────────────────────
+  function compute() {
     const profile = getProfile();
     const goals   = get(GOALS_KEY) || {};
-    const tdee    = calcTdee(profile);
-    const phase   = (get(GOALS_KEY) || {}).phase || 'maintain';
-    const delta   = phase === 'cut' ? -300 : phase === 'bulk' ? 300 : 0;
+    const phase   = goals.phase || 'maintain';
+    const { bmr, method, lbm } = calcBmr(profile, goals.currentBf);
+    const mult    = activityMult(profile);
+    const tdee    = bmr != null ? Math.round(bmr * mult) : null;
+    const delta   = phase === 'cut' ? -400 : phase === 'bulk' ? 300 : 0;
     const goalCal = tdee != null ? tdee + delta : null;
-    const prot    = proteinTarget(goals.goalWeight, phase);
-
-    document.getElementById('nutrTdee').textContent        = tdee  != null ? tdee  : '—';
-    document.getElementById('nutrCalTarget').textContent   = goalCal != null ? goalCal : '—';
-    document.getElementById('nutrProtTarget').textContent  = prot   != null ? prot + 'g' : '—';
-    document.getElementById('nutrGoalWeight').textContent  = goals.goalWeight || '—';
-
-    // Fill in form fields
-    if (goals.goalWeight) document.getElementById('nutrGoalWeightIn').value = goals.goalWeight;
-    if (goals.goalBf)     document.getElementById('nutrGoalBf').value = goals.goalBf;
-    if (goals.currentBf)  document.getElementById('nutrCurrentBf').value = goals.currentBf;
-    if (goals.phase)      document.getElementById('nutrPhase').value = goals.phase;
-
-    return { tdee, goalCal, prot, phase };
+    const { prot, perKg, refMass, unit } = calcProtein(phase, lbm, goals.goalWeight);
+    return { profile, goals, phase, bmr, method, lbm, mult, tdee, delta, goalCal, prot, perKg, refMass, unit };
   }
 
-  function saveGoals() {
-    const goals = get(GOALS_KEY) || {};
-    goals.goalWeight = document.getElementById('nutrGoalWeightIn').value || '';
-    goals.goalBf     = document.getElementById('nutrGoalBf').value || '';
-    goals.currentBf  = document.getElementById('nutrCurrentBf').value || '';
-    goals.phase      = document.getElementById('nutrPhase').value;
-    set(GOALS_KEY, goals);
-    renderTargets();
+  // ── Render targets ─────────────────────────────────────────────────────────────
+  function renderTargets(d) {
+    document.getElementById('nutrTdee').textContent       = d.tdee    != null ? d.tdee    : '—';
+    document.getElementById('nutrCalTarget').textContent  = d.goalCal != null ? d.goalCal : '—';
+    document.getElementById('nutrProtTarget').textContent = d.prot    != null ? d.prot + 'g' : '—';
+    document.getElementById('nutrGoalWeight').textContent = d.goals.goalWeight || '—';
+    const g = d.goals;
+    if (g.goalWeight) document.getElementById('nutrGoalWeightIn').value = g.goalWeight;
+    if (g.goalBf)     document.getElementById('nutrGoalBf').value       = g.goalBf;
+    if (g.currentBf)  document.getElementById('nutrCurrentBf').value    = g.currentBf;
+    if (g.phase)      document.getElementById('nutrPhase').value        = g.phase;
   }
 
-  function renderBars(goalCal, protTarget) {
-    const logs = get(LOGS_KEY) || {};
+  // ── Calculation explanation ────────────────────────────────────────────────────
+  function calcRow(label, val) {
+    return `<div class="nutr-calc-row"><span class="nutr-calc-label">${label}</span><span class="nutr-calc-val">${val}</span></div>`;
+  }
+
+  function buildCalcExplanation(d) {
+    const badge = document.getElementById('nutrCalcBadge');
+    const steps = document.getElementById('nutrCalcSteps');
+    if (!badge || !steps) return;
+
+    const kg  = parseFloat(d.profile.weightKg) || 0;
+    const cm  = parseFloat(d.profile.heightCm) || 0;
+    const age = parseInt(d.profile.age) || 0;
+    const sex = d.profile.sex || 'male';
+
+    if (!kg || !cm || !age) {
+      badge.textContent = 'Profile incomplete'; badge.className = 'nutr-calc-badge warn';
+      steps.innerHTML = '<p class="nutr-calc-note">Open ⚙ Settings and fill in height, weight, and age to enable TDEE calculations.</p>';
+      return;
+    }
+
+    badge.className   = 'nutr-calc-badge ' + (d.method === 'katch' ? 'good' : '');
+    badge.textContent = d.method === 'katch' ? 'Katch-McArdle formula' : 'Mifflin-St Jeor formula';
+
+    const actLabel = d.mult === 1.20  ? 'Sedentary (<2 hrs/wk)' :
+                     d.mult === 1.375 ? 'Lightly active (2–5 hrs/wk)' :
+                     d.mult === 1.55  ? 'Moderately active (5–10 hrs/wk)' : 'Very active (10+ hrs/wk)';
+    let rows = '';
+
+    if (d.method === 'katch') {
+      const bf  = parseFloat(d.goals.currentBf);
+      const fat = (kg * bf / 100).toFixed(1);
+      rows += calcRow('Body fat mass',        `${kg} kg × ${bf}% = ${fat} kg fat`);
+      rows += calcRow('Lean body mass (LBM)', `${kg} − ${fat} = <strong>${d.lbm.toFixed(1)} kg</strong>`);
+      rows += calcRow('BMR (Katch-McArdle)',   `370 + (21.6 × ${d.lbm.toFixed(1)}) = <strong>${d.bmr} kcal/day</strong>`);
+    } else {
+      const sign = sex === 'female' ? '− 161' : '+ 5';
+      rows += calcRow('BMR (Mifflin-St Jeor)', `(10×${kg}) + (6.25×${cm}) − (5×${age}) ${sign} = <strong>${d.bmr} kcal/day</strong>`);
+      rows += `<p class="nutr-calc-note">💡 Enter Current body fat % above for the more accurate Katch-McArdle BMR.</p>`;
+    }
+
+    rows += calcRow('Activity multiplier', `${actLabel} → ×${d.mult}`);
+    rows += calcRow('TDEE',                `${d.bmr} × ${d.mult} = <strong>${d.tdee} kcal/day</strong>`);
+
+    const phaseDesc = d.phase === 'cut'  ? '−400 kcal moderate deficit (~0.5 kg/wk)' :
+                      d.phase === 'bulk' ? '+300 kcal lean surplus (~0.3 kg/wk)'      : 'no adjustment';
+    const calStr = d.delta !== 0
+      ? `${d.tdee} ${d.delta > 0 ? '+' : ''}${d.delta} = <strong>${d.goalCal} kcal</strong>`
+      : `<strong>${d.tdee} kcal</strong>`;
+    rows += calcRow(`Calorie goal (${phaseDesc})`, calStr);
+
+    if (d.prot != null) {
+      rows += calcRow(`Protein (${d.perKg} g/kg ${d.unit})`, `${d.refMass} kg × ${d.perKg} = <strong>${d.prot} g/day</strong>`);
+    }
+
+    steps.innerHTML = rows;
+  }
+
+  // ── Render progress bars ───────────────────────────────────────────────────────
+  function renderBars(d) {
+    const logs  = get(LOGS_KEY) || {};
     const entry = logs[today()] || {};
-    const cal  = parseFloat(entry.cal) || 0;
-    const prot = parseFloat(entry.prot) || 0;
+    const cal   = parseFloat(entry.cal)  || 0;
+    const prot  = parseFloat(entry.prot) || 0;
 
-    const calPct  = goalCal  ? Math.min(100, Math.round(cal  / goalCal  * 100)) : 0;
-    const protPct = protTarget ? Math.min(100, Math.round(prot / protTarget * 100)) : 0;
+    const calPct  = d.goalCal ? Math.min(100, cal  / d.goalCal * 100) : 0;
+    const protPct = d.prot    ? Math.min(100, prot / d.prot    * 100) : 0;
 
-    document.getElementById('nutrBarCal').style.width   = calPct + '%';
-    document.getElementById('nutrBarProt').style.width  = protPct + '%';
-    document.getElementById('nutrBarCalVal').textContent  = goalCal  ? cal + ' / ' + goalCal + ' kcal' : cal ? cal + ' kcal' : '—';
-    document.getElementById('nutrBarProtVal').textContent = protTarget ? prot + ' / ' + protTarget + 'g' : prot ? prot + 'g' : '—';
+    const calColor = calPct >= 105 ? '#FF6B6B' : calPct >= 85 ? '#F2C063' : '#6BE3A4';
+    document.getElementById('nutrBarCal').style.width      = calPct  + '%';
+    document.getElementById('nutrBarCal').style.background = calColor;
+    document.getElementById('nutrBarProt').style.width     = protPct + '%';
+    document.getElementById('nutrBarCalVal').textContent   = d.goalCal ? `${cal} / ${d.goalCal} kcal` : (cal  ? `${cal} kcal` : '—');
+    document.getElementById('nutrBarProtVal').textContent  = d.prot    ? `${prot} / ${d.prot} g`      : (prot ? `${prot} g`   : '—');
 
-    // Pre-fill today's log into inputs
-    if (entry.cal)  document.getElementById('nutrCal').value  = entry.cal;
-    if (entry.prot) document.getElementById('nutrProt').value = entry.prot;
-    if (entry.carbs)document.getElementById('nutrCarbs').value= entry.carbs;
-    if (entry.fat)  document.getElementById('nutrFat').value  = entry.fat;
-    if (entry.weight) document.getElementById('nutrWeight').value = entry.weight;
-    if (entry.bf)   document.getElementById('nutrBodyFat').value  = entry.bf;
+    const fields = [['nutrCal','cal'],['nutrProt','prot'],['nutrCarbs','carbs'],['nutrFat','fat'],['nutrWeight','weight'],['nutrBodyFat','bf']];
+    fields.forEach(([id, key]) => { if (entry[key]) document.getElementById(id).value = entry[key]; });
   }
 
+  // ── Render charts ──────────────────────────────────────────────────────────────
   function renderChart(svgId, logs30, key, color, goalLine) {
     const svg = document.getElementById(svgId);
     if (!svg) return;
-    const vals = logs30.map(e => parseFloat(e ? e[key] : '') || null);
+    const vals    = logs30.map(e => parseFloat(e ? e[key] : '') || null);
     const defined = vals.filter(v => v != null);
     if (!defined.length) { svg.innerHTML = ''; return; }
-    const maxV = Math.max(...defined);
-    const minV = Math.min(...defined);
+    const maxV = Math.max(...defined), minV = Math.min(...defined);
     const range = maxV - minV || 1;
-    const W = 300, H = 56, pad = 4;
-    const n = vals.length;
-    const barW = Math.max(2, (W / n) - 1);
-
+    const W = 300, H = 56, pad = 4, n = vals.length;
+    const bw = Math.max(2, (W / n) - 1);
     let html = '';
     vals.forEach((v, i) => {
       if (v == null) return;
       const x = (i / n) * W;
       const h = pad + ((v - minV) / range) * (H - pad * 2);
-      html += `<rect x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" opacity="0.7" rx="1"/>`;
+      html += `<rect x="${x.toFixed(1)}" y="${(H-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" opacity="0.75" rx="1"/>`;
     });
-
-    if (goalLine != null && maxV > 0) {
+    if (goalLine != null && goalLine >= minV && goalLine <= maxV) {
       const gy = H - pad - ((goalLine - minV) / range) * (H - pad * 2);
-      if (gy > 0 && gy < H) {
-        html += `<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="4,3"/>`;
-      }
+      html += `<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,0.28)" stroke-width="1" stroke-dasharray="4,3"/>`;
     }
     svg.innerHTML = html;
   }
 
-  function renderCharts() {
+  function renderCharts(d) {
     const logs = get(LOGS_KEY) || {};
-    const goals = get(GOALS_KEY) || {};
-    const { goalCal, prot: protTarget } = renderTargets();
-
     const days30 = [];
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-      days30.push(logs[key] || null);
+      const dt = new Date(); dt.setDate(dt.getDate() - i);
+      const k = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+      days30.push(logs[k] || null);
     }
-
-    renderChart('nutrChartCal',    days30, 'cal',    '#F2C063', goalCal);
-    renderChart('nutrChartProt',   days30, 'prot',   '#6BE3A4', protTarget);
+    renderChart('nutrChartCal',    days30, 'cal',    '#F2C063', d.goalCal);
+    renderChart('nutrChartProt',   days30, 'prot',   '#6BE3A4', d.prot);
     renderChart('nutrChartWeight', days30, 'weight', '#A78BFA', null);
-    renderChart('nutrChartBf',     days30, 'bf',     '#60A5FA', parseFloat(goals.goalBf) || null);
+    renderChart('nutrChartBf',     days30, 'bf',     '#60A5FA', parseFloat(d.goals.goalBf) || null);
   }
 
+  // ── Master render ──────────────────────────────────────────────────────────────
+  function renderAll() {
+    const d = compute();
+    renderTargets(d);
+    renderBars(d);
+    renderCharts(d);
+    const panel = document.getElementById('nutrCalcPanel');
+    if (panel && !panel.hidden) buildCalcExplanation(d);
+  }
+
+  // ── Save goals ─────────────────────────────────────────────────────────────────
+  function saveGoals() {
+    const goals = get(GOALS_KEY) || {};
+    goals.goalWeight = document.getElementById('nutrGoalWeightIn').value || '';
+    goals.goalBf     = document.getElementById('nutrGoalBf').value       || '';
+    goals.currentBf  = document.getElementById('nutrCurrentBf').value    || '';
+    goals.phase      = document.getElementById('nutrPhase').value;
+    set(GOALS_KEY, goals);
+    renderAll();
+  }
+
+  // ── Save daily log ─────────────────────────────────────────────────────────────
   function saveLog() {
     const logs = get(LOGS_KEY) || {};
-    const entry = {
-      cal:    document.getElementById('nutrCal').value,
-      prot:   document.getElementById('nutrProt').value,
-      carbs:  document.getElementById('nutrCarbs').value,
-      fat:    document.getElementById('nutrFat').value,
-      weight: document.getElementById('nutrWeight').value,
-      bf:     document.getElementById('nutrBodyFat').value,
-    };
-    Object.keys(entry).forEach(k => { if (!entry[k]) delete entry[k]; });
+    const entry = {};
+    [['cal','nutrCal'],['prot','nutrProt'],['carbs','nutrCarbs'],['fat','nutrFat'],['weight','nutrWeight'],['bf','nutrBodyFat']].forEach(([k,id]) => {
+      const v = document.getElementById(id).value; if (v) entry[k] = v;
+    });
     logs[today()] = entry;
     set(LOGS_KEY, logs);
     saveGoals();
-    renderCharts();
     const note = document.getElementById('nutrSavedNote');
     note.textContent = 'Saved ✓';
     note.style.opacity = '1';
     setTimeout(() => { note.style.opacity = '0'; }, 2000);
   }
 
+  // ── Boot ───────────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
     ['nutrGoalWeightIn','nutrGoalBf','nutrPhase','nutrCurrentBf'].forEach(id => {
       document.getElementById(id).addEventListener('change', saveGoals);
     });
     document.getElementById('nutrSaveBtn').addEventListener('click', saveLog);
-    const { goalCal, prot } = renderTargets();
-    renderBars(goalCal, prot);
-    renderCharts();
+
+    const infoBtn = document.getElementById('nutrInfoBtn');
+    const panel   = document.getElementById('nutrCalcPanel');
+    if (infoBtn && panel) {
+      infoBtn.addEventListener('click', () => {
+        panel.hidden = !panel.hidden;
+        infoBtn.classList.toggle('active', !panel.hidden);
+        if (!panel.hidden) buildCalcExplanation(compute());
+      });
+    }
+
+    renderAll();
   });
 })();
 </script>
