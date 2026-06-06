@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<meta name="color-scheme" content="dark">
+<title>Home · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg:#050506; --tp:#FAFAFA; --ts:#B8B6B0; --tt:#76746E;
+  --border:rgba(255,255,255,0.06); --border-strong:rgba(255,255,255,0.12);
+  --font:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ts);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{min-height:100vh;position:relative;overflow-x:hidden;padding:56px 18px 90px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(60% 50% at 76% 12%,rgba(224,118,88,.13) 0%,transparent 55%),radial-gradient(50% 40% at 20% 88%,rgba(180,180,200,.06) 0%,transparent 55%);filter:blur(40px);pointer-events:none;z-index:0;animation:drift 36s ease-in-out infinite alternate;}
+body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(rgba(255,255,255,.014) 1px,transparent 1px);background-size:3px 3px;pointer-events:none;z-index:1;}
+@keyframes drift{0%{transform:translate(0,0);}100%{transform:translate(-2%,2%);}}
+.page{position:relative;z-index:2;max-width:680px;margin:0 auto;}
+
+.page-head{margin-bottom:28px;}
+.page-title{font-size:26px;font-weight:700;letter-spacing:-.025em;background:linear-gradient(135deg,#fff 0%,#888 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;color:transparent;margin:0 0 4px;}
+.page-sub{font-size:12px;color:var(--tt);font-family:var(--mono);}
+
+/* bento grid */
+.bento{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.bento{grid-template-columns:1fr;}}
+
+.tile{
+  position:relative;display:flex;flex-direction:column;justify-content:space-between;
+  padding:20px;border-radius:22px;text-decoration:none;
+  background:rgba(255,255,255,.025);border:1px solid var(--border);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transition:transform .15s,box-shadow .18s,border-color .15s;
+  overflow:hidden;
+  animation:fadeUp .4s ease both;
+  min-height:130px;
+}
+.tile:hover{transform:translateY(-2px);box-shadow:0 14px 44px rgba(0,0,0,.55);border-color:var(--border-strong);}
+.tile:active{transform:translateY(0);}
+.tile.wide{grid-column:1/-1;}
+.tile.tall{min-height:180px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.tile:nth-child(1){animation-delay:.04s;}.tile:nth-child(2){animation-delay:.08s;}.tile:nth-child(3){animation-delay:.12s;}.tile:nth-child(4){animation-delay:.16s;}.tile:nth-child(5){animation-delay:.20s;}.tile:nth-child(6){animation-delay:.24s;}.tile:nth-child(7){animation-delay:.28s;}.tile:nth-child(8){animation-delay:.32s;}
+
+/* accent glow overlay */
+.tile::before{content:'';position:absolute;inset:0;border-radius:22px;opacity:0;transition:opacity .25s;pointer-events:none;}
+.tile:hover::before{opacity:1;}
+.tile[data-accent="blue"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(26,115,232,.12) 0%,transparent 70%);}
+.tile[data-accent="green"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(107,227,164,.10) 0%,transparent 70%);}
+.tile[data-accent="purple"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(167,139,250,.10) 0%,transparent 70%);}
+.tile[data-accent="yellow"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(242,192,99,.10) 0%,transparent 70%);}
+.tile[data-accent="red"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(255,138,138,.10) 0%,transparent 70%);}
+.tile[data-accent="cyan"]::before{background:radial-gradient(60% 55% at 15% 15%,rgba(125,211,252,.10) 0%,transparent 70%);}
+
+.tile-icon{font-size:28px;line-height:1;margin-bottom:12px;}
+.tile-label{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--tt);margin-bottom:5px;}
+.tile-name{font-size:18px;font-weight:700;letter-spacing:-.015em;color:var(--tp);line-height:1.2;margin-bottom:6px;}
+.tile-desc{font-size:12px;color:var(--ts);line-height:1.5;}
+.tile-stat{font-family:var(--mono);font-size:11px;color:var(--tt);margin-top:10px;}
+.tile-stat span{color:var(--tp);font-weight:700;}
+
+.tile-arrow{
+  position:absolute;bottom:18px;right:18px;
+  width:28px;height:28px;border-radius:8px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--tt);
+  transition:background .15s,color .15s;
+}
+.tile:hover .tile-arrow{background:rgba(255,255,255,.12);color:var(--tp);}
+
+/* Goals tile - big version with live bar */
+.goals-bar{display:flex;gap:3px;margin-top:12px;height:5px;}
+.goals-bar-seg{flex:1;border-radius:3px;background:rgba(255,255,255,.08);}
+.goals-bar-seg.done{background:#6BE3A4;box-shadow:0 0 5px rgba(107,227,164,.4);}
+.goals-nums{font-size:32px;font-weight:700;letter-spacing:-.04em;color:var(--tp);line-height:1;margin:4px 0 2px;font-variant-numeric:tabular-nums;}
+.goals-nums span{font-size:16px;color:var(--tt);font-weight:500;}
+
+/* day ring mini inside tile */
+.ring-mini-wrap{position:absolute;right:16px;top:16px;width:64px;height:64px;}
+.ring-mini-svg{width:100%;height:100%;transform:rotate(-90deg);}
+.ring-mini-track{fill:none;stroke:rgba(255,255,255,.06);stroke-width:6;}
+.ring-mini-fill{fill:none;stroke-width:6;stroke-linecap:round;stroke-dasharray:163;stroke-dashoffset:163;transition:stroke-dashoffset .8s cubic-bezier(.22,1,.36,1),stroke .4s;}
+.ring-mini-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-mini-pct{font-size:13px;font-weight:700;color:var(--tp);line-height:1;}
+.ring-mini-lbl{font-size:7px;color:var(--tt);letter-spacing:.06em;margin-top:2px;}
+
+/* section divider */
+.bento-divider{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:4px 0;}
+.bento-divider-text{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--tt);white-space:nowrap;}
+.bento-divider-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.08),transparent);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <h1 class="page-title">Joe's Dashboard</h1>
+    <div class="page-sub" id="pageSubline">—</div>
+  </div>
+
+  <div class="bento" id="bentoGrid">
+
+    <!-- GOALS — wide, with live progress -->
+    <a href="main.html" class="tile wide" data-accent="green">
+      <div>
+        <div class="tile-label">Daily</div>
+        <div class="tile-name">Goals</div>
+        <div class="tile-desc">Today's task list, streaks, and tomorrow planning.</div>
+        <div class="goals-bar" id="goalsBar"></div>
+        <div class="tile-stat" id="goalsStat">—</div>
+      </div>
+      <div class="ring-mini-wrap">
+        <svg class="ring-mini-svg" viewBox="0 0 64 64">
+          <circle class="ring-mini-track" cx="32" cy="32" r="26"/>
+          <circle class="ring-mini-fill" cx="32" cy="32" r="26" id="dayRingMini" stroke="#6BE3A4"/>
+        </svg>
+        <div class="ring-mini-center">
+          <div class="ring-mini-pct" id="dayPct">—</div>
+          <div class="ring-mini-lbl">day</div>
+        </div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- HEALTH -->
+    <a href="health.html" class="tile" data-accent="cyan">
+      <div>
+        <div class="tile-icon">💊</div>
+        <div class="tile-label">Wellness</div>
+        <div class="tile-name">Health</div>
+        <div class="tile-desc">Water intake, supplements, nutrition, and sleep.</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- FITNESS -->
+    <a href="gym.html" class="tile" data-accent="red">
+      <div>
+        <div class="tile-icon">💪</div>
+        <div class="tile-label">Training</div>
+        <div class="tile-name">Fitness</div>
+        <div class="tile-desc">Workouts, lift tracking, and performance trends.</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- DIVIDER -->
+    <div class="bento-divider">
+      <div class="bento-divider-text">Connected</div>
+      <div class="bento-divider-line"></div>
+    </div>
+
+    <!-- CALENDAR -->
+    <a href="calendar.html" class="tile" data-accent="blue">
+      <div>
+        <div class="tile-icon">📅</div>
+        <div class="tile-label">Schedule</div>
+        <div class="tile-name">Calendar</div>
+        <div class="tile-desc">Upcoming events, agenda view, and quick add.</div>
+        <div class="tile-stat" id="calStat">Google Calendar</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- EMAIL -->
+    <a href="email.html" class="tile" data-accent="purple">
+      <div>
+        <div class="tile-icon">✉️</div>
+        <div class="tile-label">Inbox</div>
+        <div class="tile-name">Email</div>
+        <div class="tile-desc">Priority inbox, quick replies, and daily digest.</div>
+        <div class="tile-stat" id="emailStat">Gmail priority view</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- HEALTH DATA (fitbit) -->
+    <a href="fitbit.html" class="tile" data-accent="red">
+      <div>
+        <div class="tile-icon">❤️</div>
+        <div class="tile-label">Biometrics</div>
+        <div class="tile-name">Health Data</div>
+        <div class="tile-desc">Steps, sleep stages, heart rate, and 7-day trends.</div>
+        <div class="tile-stat" id="fitbitStat">Google Fit sync</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- FINANCE -->
+    <a href="finance.html" class="tile" data-accent="yellow">
+      <div>
+        <div class="tile-icon">📊</div>
+        <div class="tile-label">Money</div>
+        <div class="tile-name">Finance</div>
+        <div class="tile-desc">Spending, budgets, and financial snapshots.</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+    <!-- DIVIDER -->
+    <div class="bento-divider">
+      <div class="bento-divider-text">System</div>
+      <div class="bento-divider-line"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <a href="settings.html" class="tile wide" data-accent="blue">
+      <div>
+        <div class="tile-icon">⚙️</div>
+        <div class="tile-label">Account</div>
+        <div class="tile-name">Settings</div>
+        <div class="tile-desc">Connect your Google account to sync Calendar, Email, and Health data across all sections.</div>
+        <div class="tile-stat" id="settingsStat">—</div>
+      </div>
+      <div class="tile-arrow">→</div>
+    </a>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Date ring ────────────────────────────────────────────────
+  const WAKE = 8, SLEEP = 24;
+  const PALETTE = [
+    [0,[255,216,158]],[12.5,[255,205,121]],[25,[255,227,143]],[37.5,[255,183,106]],
+    [50,[255,149,89]],[62.5,[243,111,79]],[75,[226,93,122]],[87.5,[123,91,176]],[100,[47,58,102]]
+  ];
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function pal(p){
+    if(p<=PALETTE[0][0])return PALETTE[0][1];
+    if(p>=PALETTE[PALETTE.length-1][0])return PALETTE[PALETTE.length-1][1];
+    for(let i=0;i<PALETTE.length-1;i++){
+      const[p0,c0]=PALETTE[i],[p1,c1]=PALETTE[i+1];
+      if(p>=p0&&p<=p1){const t=(p-p0)/(p1-p0);return[lerp(c0[0],c1[0],t),lerp(c0[1],c1[1],t),lerp(c0[2],c1[2],t)];}
+    }
+    return[255,255,255];
+  }
+  function rgb(c){return'rgb('+Math.round(c[0])+','+Math.round(c[1])+','+Math.round(c[2])+')';}
+  function fmtClock(d){
+    let h=d.getHours();const m=d.getMinutes(),ap=h>=12?'PM':'AM';
+    h=h%12;if(!h)h=12;
+    return h+':'+(m<10?'0':'')+m+' '+ap;
+  }
+
+  function updateRing(){
+    const now=new Date();
+    const h=now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
+    const sub=document.getElementById('pageSubline');
+    const ringEl=document.getElementById('dayRingMini');
+    const pctEl=document.getElementById('dayPct');
+
+    if(h<WAKE||h>=SLEEP){
+      if(ringEl){ringEl.style.strokeDashoffset='163';ringEl.style.stroke='#4D4B47';}
+      if(pctEl)pctEl.textContent=h<WAKE?'😴':'✓';
+      if(sub)sub.textContent=fmtClock(now)+(h<WAKE?' · Still sleeping':' · Day complete');
+      return;
+    }
+    const span=SLEEP-WAKE;
+    const pct=(h-WAKE)/span*100;
+    const circ=163;
+    if(ringEl){ringEl.style.strokeDashoffset=String(circ*(1-pct/100));ringEl.style.stroke=rgb(pal(pct));}
+    if(pctEl)pctEl.textContent=Math.floor(pct)+'%';
+    if(sub){
+      const minsLeft=Math.round((SLEEP-h)*60);
+      const hLeft=Math.floor(minsLeft/60),mLeft=minsLeft%60;
+      sub.textContent=fmtClock(now)+' · '+hLeft+'h '+mLeft+'m left today';
+    }
+  }
+
+  // ── Goals from localStorage ──────────────────────────────────
+  function pad2(n){return String(n).padStart(2,'0');}
+  function activeDate(){
+    const now=new Date();
+    if(now.getHours()<6){const d=new Date(now);d.setDate(d.getDate()-1);return d;}
+    return now;
+  }
+  function todayKey(){
+    const d=activeDate();
+    return'goals:'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+  }
+  function loadGoals(){
+    try{const g=JSON.parse(localStorage.getItem(todayKey()));return Array.isArray(g)?g:[];}catch{return[];}
+  }
+
+  function renderGoals(){
+    const goals=loadGoals();
+    const total=goals.length,done=goals.filter(g=>g.done).length;
+    const bar=document.getElementById('goalsBar');
+    const stat=document.getElementById('goalsStat');
+    if(bar){
+      if(total===0){bar.innerHTML='<div style="font-size:11px;color:var(--tt)">No goals yet today</div>';}
+      else{bar.innerHTML=goals.map(g=>'<div class="goals-bar-seg'+(g.done?' done':'')+'"></div>').join('');}
+    }
+    if(stat){
+      if(total===0)stat.innerHTML='Add goals in the task list';
+      else if(done===total)stat.innerHTML='<span>All '+total+' goals complete ✓</span>';
+      else stat.innerHTML='<span>'+done+'/'+total+'</span> goals done today';
+    }
+  }
+
+  // ── Google account status ────────────────────────────────────
+  function checkGoogle(){
+    const tok=localStorage.getItem('google_access_token');
+    const exp=parseInt(localStorage.getItem('google_token_exp')||'0',10);
+    const valid=tok&&(!exp||Date.now()<exp);
+    const stat=document.getElementById('settingsStat');
+    if(stat){
+      if(valid)stat.innerHTML='<span style="color:#6BE3A4">● Connected</span> · Google account linked';
+      else stat.innerHTML='<span style="color:#FF8A8A">● Not connected</span> · Tap to pair your account';
+    }
+
+    // Google Fit last sync
+    const lastSync=parseInt(localStorage.getItem('gh_last_sync')||'0',10);
+    const fitStat=document.getElementById('fitbitStat');
+    if(fitStat&&lastSync){
+      const minAgo=Math.round((Date.now()-lastSync)/60000);
+      const str=minAgo<2?'Just now':minAgo<60?minAgo+' min ago':Math.round(minAgo/60)+'h ago';
+      fitStat.innerHTML='Last synced <span>'+str+'</span>';
+    }
+  }
+
+  updateRing();
+  setInterval(updateRing,60000);
+  renderGoals();
+  checkGoogle();
+  window.addEventListener('storage',()=>{renderGoals();checkGoogle();});
+})();
+</script>
+</body>
+</html>
