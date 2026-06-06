@@ -308,12 +308,8 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     document.addEventListener('gesturestart', blockGesture, { passive: false });
     document.addEventListener('gesturechange', blockGesture, { passive: false });
     document.addEventListener('gestureend', blockGesture, { passive: false });
-    let lastTouch = 0;
-    document.addEventListener('touchend', (e) => {
-      const now = Date.now();
-      if (now - lastTouch <= 300) e.preventDefault();
-      lastTouch = now;
-    }, { passive: false });
+    // touch-action: pan-y in CSS handles double-tap zoom on modern browsers.
+    // A touchend preventDefault here would suppress click events on rapid sequential taps.
   }
   function startModalLock() {
     const MODAL_SELECTORS = ['.modal-bg', '.po-modal-bg', '.wt-overlay', '.wt-viewer', '.wt-cam'];
