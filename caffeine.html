@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Stimulants · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --accent: #C9A36B;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #050506;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px calc(80px + env(safe-area-inset-bottom));
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 72% 10%, rgba(201,163,107,0.14), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: -2;
+  animation: drift 36s ease-in-out infinite alternate;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 3px 3px;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes drift {
+  0%   { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-22px,14px,0); }
+}
+.page { max-width: 1100px; margin: 0 auto; }
+.dash-title {
+  margin: 0 0 18px;
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.025em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+.section { margin-top: 6px; }
+.section-title {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.section-title::before { content: ''; width: 18px; height: 1px; background: var(--text-tertiary); opacity: 0.6; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+.gm-card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border-radius: 16px; padding: 20px; margin-bottom: 14px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+
+/* ---- Your Day ---- */
+.day-top { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
+.energy-ring { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+.energy-ring svg { display: block; }
+.ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.ring-num {
+  font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em; color: var(--text-primary); line-height: 1;
+  transition: color 0.3s;
+}
+.ring-state { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
+.ring-subtext { font-size: 8.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); opacity: 0.55; margin-top: 1px; }
+.day-info { flex: 1; min-width: 150px; padding-top: 4px; }
+.day-info-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px; }
+.day-hint { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+
+/* Chart */
+.chart-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.chart-btn {
+  padding: 5px 11px;
+  border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent;
+  color: var(--text-tertiary); font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+}
+.chart-btn.active { background: rgba(201,163,107,0.15); border-color: rgba(201,163,107,0.4); color: var(--accent); }
+.chart-wrap { position: relative; border-radius: 10px; overflow: hidden; cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+.chart-wrap svg { display: block; width: 100%; height: 160px; }
+
+/* Footer band */
+.day-footer { display: flex; flex-wrap: wrap; gap: 0; margin-top: 14px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+.day-footer-item { flex: 1; min-width: 110px; padding: 10px 14px; border-right: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); }
+.day-footer-item:last-child { border-right: 0; }
+.day-footer-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px; }
+.day-footer-value { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+
+/* Timing */
+.timing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.timing-tile { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; }
+.timing-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.timing-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; margin-bottom: 4px; }
+.timing-sub { font-size: 11px; color: var(--text-tertiary); line-height: 1.4; }
+
+/* Tips */
+.tips-list { list-style: none; margin: 0; padding: 0; }
+.tip-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.tip-item:last-child { border-bottom: 0; }
+.tip-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* Today bars */
+.mg-bar-wrap { margin-bottom: 14px; }
+.mg-bar-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+.mg-bar-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); }
+.mg-bar-value { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.mg-bar-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.mg-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.22,1,0.36,1), background 0.3s; }
+.active-now-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.active-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-secondary);
+}
+.active-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  box-shadow: 0 0 8px rgba(201,163,107,0.7);
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}
+@keyframes badge-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.45;transform:scale(0.85)} }
+.note-card { padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(201,163,107,0.2); background: rgba(201,163,107,0.06); font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-top: 12px; }
+
+/* Log search */
+.drink-search-wrap { position: relative; margin-bottom: 10px; }
+.drink-search { width: 100%; padding: 11px 14px 11px 38px; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: var(--font); font-size: 14px; outline: none; transition: border-color 0.2s; }
+.drink-search::placeholder { color: var(--text-tertiary); }
+.drink-search:focus { border-color: rgba(255,255,255,0.22); }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
+.type-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.type-tab { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent; color: var(--text-tertiary); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.type-tab.active { background: rgba(201,163,107,0.12); border-color: rgba(201,163,107,0.35); color: var(--accent); }
+.drink-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 7px;
+  max-height: 300px; overflow-y: auto; padding-right: 4px; margin-bottom: 14px;
+}
+.drink-grid::-webkit-scrollbar { width: 4px; }
+.drink-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+.drink-item { display: flex; flex-direction: column; padding: 10px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.10s; -webkit-tap-highlight-color: transparent; }
+.drink-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(201,163,107,0.3); }
+.drink-item:active { transform: scale(0.97); }
+.drink-emoji { font-size: 20px; margin-bottom: 4px; }
+.drink-name { font-size: 11px; font-weight: 600; color: var(--text-primary); line-height: 1.3; margin-bottom: 2px; }
+.drink-mg { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--accent); }
+.drink-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
+.custom-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.custom-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); flex-basis: 100%; }
+.cust-input { padding: 9px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; background: rgba(0,0,0,0.28); color: var(--text-primary); font-family: var(--font); font-size: 13px; outline: none; }
+.cust-input:focus { border-color: rgba(255,255,255,0.22); }
+.cust-name { flex: 2; min-width: 100px; }
+.cust-mg { width: 75px; font-family: var(--font-mono); }
+.cust-type { width: 130px; cursor: pointer; }
+.gm-add { padding: 9px 18px; border: 0; border-radius: 10px; background: linear-gradient(180deg,#FFFFFF 0%,#E8E5DD 100%); color: #0A0A0B; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),0 2px 8px rgba(0,0,0,0.35); transition: transform 0.1s, filter 0.15s; }
+.gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+/* Log entries */
+.log-entry { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; margin-bottom: 6px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; }
+.log-emoji { font-size: 22px; flex-shrink: 0; line-height: 1.2; }
+.log-body { flex: 1; min-width: 0; }
+.log-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.log-time-str { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px; }
+.log-milestones { display: flex; flex-wrap: wrap; gap: 5px; }
+.ms { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--text-tertiary); }
+.ms.done { color: var(--success); border-color: rgba(107,227,164,0.2); background: rgba(107,227,164,0.05); }
+.log-del { border: 0; background: transparent; color: var(--text-tertiary); font-size: 18px; cursor: pointer; padding: 0 4px; opacity: 0.4; transition: opacity 0.2s, color 0.2s; align-self: flex-start; flex-shrink: 0; }
+.log-entry:hover .log-del { opacity: 1; }
+.log-del:hover { color: var(--danger); }
+.empty-state { text-align: center; font-size: 13px; font-style: italic; color: var(--text-tertiary); padding: 14px 0; }
+
+@media (max-width: 620px) { .timing-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  body { padding: max(20px,env(safe-area-inset-top)) 14px calc(72px + env(safe-area-inset-bottom)); }
+  .gm-card { padding: 16px; }
+  .drink-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="dash-title">Stimulants</h1>
+
+  <!-- ========== 1. YOUR DAY ========== -->
+  <div class="section">
+    <div class="section-title">Your Day</div>
+    <div class="gm-card">
+      <div class="day-top">
+        <div class="energy-ring">
+          <svg viewBox="0 0 110 110" width="110" height="110">
+            <defs>
+              <filter id="rGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="ringFill" cx="55" cy="55" r="46" fill="none" stroke="#C9A36B" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="0 289"
+              transform="rotate(-90 55 55)" filter="url(#rGlow)"
+              style="transition:stroke-dasharray 0.55s cubic-bezier(0.22,1,0.36,1),stroke 0.3s ease"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num" id="ringNum">–</div>
+            <div class="ring-state" id="ringState">–</div>
+            <div class="ring-subtext" id="ringSubtext">NOW</div>
+          </div>
+        </div>
+        <div class="day-info">
+          <div class="day-info-label">Energy level</div>
+          <div class="day-hint" id="dayHint">Loading…</div>
+        </div>
+      </div>
+
+      <div class="chart-toggle">
+        <button class="chart-btn active" data-mode="line">LINE</button>
+        <button class="chart-btn" data-mode="bars">BARS</button>
+        <button class="chart-btn" data-mode="stack">STACK</button>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="energySvg" viewBox="0 0 800 160" preserveAspectRatio="none">
+          <g id="curveLayer"></g>
+          <g id="scrubLayer"></g>
+        </svg>
+      </div>
+
+      <div class="day-footer">
+        <div class="day-footer-item">
+          <div class="day-footer-label">Peak Focus</div>
+          <div class="day-footer-value" id="footerPeak">–</div>
+        </div>
+        <div class="day-footer-item">
+          <div class="day-footer-label">Predicted Crash</div>
+          <div class="day-footer-value" id="footerCrash">–</div>
+        </div>
+        <div class="day-footer-item">
+          <div class="day-footer-label">Last Coffee By</div>
+          <div class="day-footer-value" id="footerCutoff">–</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 2. SMART TIMING ========== -->
+  <div class="section">
+    <div class="section-title">Smart Timing</div>
+    <div class="timing-grid">
+      <div class="timing-tile" id="tileProd">
+        <div class="timing-label">Most Productive</div>
+        <div class="timing-value">–</div>
+        <div class="timing-sub">Calculating…</div>
+      </div>
+      <div class="timing-tile" id="tileCrash">
+        <div class="timing-label">Crash Risk</div>
+        <div class="timing-value">–</div>
+        <div class="timing-sub">–</div>
+      </div>
+      <div class="timing-tile" id="tileCutoff">
+        <div class="timing-label">Coffee Cutoff</div>
+        <div class="timing-value">–</div>
+        <div class="timing-sub">–</div>
+      </div>
+    </div>
+    <div class="gm-card">
+      <ul class="tips-list" id="tipsList"></ul>
+    </div>
+  </div>
+
+  <!-- ========== 3. TODAY ========== -->
+  <div class="section">
+    <div class="section-title">Today</div>
+    <div class="gm-card" id="todayCard"></div>
+  </div>
+
+  <!-- ========== 4. LOG ========== -->
+  <div class="section">
+    <div class="section-title">Log a Stimulant</div>
+    <div class="gm-card">
+      <div class="drink-search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="drink-search" id="drinkSearch" placeholder="Search caffeine, adderall…" autocomplete="off">
+      </div>
+      <div class="type-tabs">
+        <button class="type-tab active" data-filter="all">All</button>
+        <button class="type-tab" data-filter="caffeine">☕ Caffeine</button>
+        <button class="type-tab" data-filter="adderall">💊 Adderall</button>
+      </div>
+      <div class="drink-grid" id="drinkGrid"></div>
+      <div class="custom-form">
+        <div class="custom-label">Custom</div>
+        <input class="cust-input cust-name" id="custName" placeholder="Name…" autocomplete="off">
+        <input class="cust-input cust-mg" id="custMg" type="number" placeholder="mg" min="1" max="999">
+        <select class="cust-input cust-type" id="custType">
+          <option value="caffeine">Caffeine</option>
+          <option value="adderall_ir">Adderall IR</option>
+          <option value="adderall_xr">Adderall XR</option>
+        </select>
+        <button class="gm-add" id="custAdd">Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 5. LOGGED TODAY ========== -->
+  <div class="section">
+    <div class="section-title">Logged Today</div>
+    <div class="gm-card"><div id="logList"></div></div>
+  </div>
+
+</div><!-- /.page -->
+<script>
+(function () {
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const TAU = 2 * Math.PI;
+const FDA_CAF = 400;
+const TODAY = (() => {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+})();
+
+const PK = {
+  caffeine:    { peakH: 0.75, halfLife: 5,    clear: 10, label: 'Caffeine',    color: '#C9A36B' },
+  adderall_ir: { peakH: 1.5,  halfLife: 9.5,  clear: 2,  label: 'Adderall IR', color: '#A78BFA' },
+  adderall_xr: { peakH: 3.0,  halfLife: 10.0, clear: 2,  label: 'Adderall XR', color: '#818CF8' },
+};
+
+const BOOST = {
+  caffeine:    mg => 34  * (1 - Math.exp(-mg / 110)),
+  adderall_ir: mg => 30  * (1 - Math.exp(-mg / 12)),
+  adderall_xr: mg => 30  * (1 - Math.exp(-mg / 12)),
+};
+
+const DB = [
+  // COFFEE
+  {name:'Drip coffee (8 oz)',mg:95,emoji:'☕',type:'caffeine'},
+  {name:'Drip coffee (12 oz)',mg:142,emoji:'☕',type:'caffeine'},
+  {name:'Drip coffee (16 oz)',mg:190,emoji:'☕',type:'caffeine'},
+  {name:'Espresso shot',mg:63,emoji:'☕',type:'caffeine'},
+  {name:'Double espresso',mg:126,emoji:'☕',type:'caffeine'},
+  {name:'Latte (12 oz)',mg:63,emoji:'☕',type:'caffeine'},
+  {name:'Latte (16 oz)',mg:126,emoji:'☕',type:'caffeine'},
+  {name:'Cappuccino',mg:63,emoji:'☕',type:'caffeine'},
+  {name:'Americano (12 oz)',mg:120,emoji:'☕',type:'caffeine'},
+  {name:'Macchiato',mg:75,emoji:'☕',type:'caffeine'},
+  {name:'French press (8 oz)',mg:107,emoji:'☕',type:'caffeine'},
+  {name:'Instant coffee',mg:62,emoji:'☕',type:'caffeine'},
+  {name:'Cold brew (12 oz)',mg:200,emoji:'🧊',type:'caffeine'},
+  {name:'Cold brew (16 oz)',mg:260,emoji:'🧊',type:'caffeine'},
+  {name:'Decaf coffee',mg:5,emoji:'☕',type:'caffeine'},
+  // TEA
+  {name:'Black tea (8 oz)',mg:47,emoji:'🍵',type:'caffeine'},
+  {name:'Green tea (8 oz)',mg:28,emoji:'🍵',type:'caffeine'},
+  {name:'Matcha latte',mg:70,emoji:'🍵',type:'caffeine'},
+  {name:'White tea',mg:25,emoji:'🍵',type:'caffeine'},
+  {name:'Oolong tea',mg:37,emoji:'🍵',type:'caffeine'},
+  {name:'Chai latte',mg:50,emoji:'🍵',type:'caffeine'},
+  {name:'Earl Grey',mg:55,emoji:'🍵',type:'caffeine'},
+  // ENERGY DRINKS
+  {name:'Red Bull (8.4 oz)',mg:80,emoji:'🐂',type:'caffeine'},
+  {name:'Monster (16 oz)',mg:160,emoji:'👾',type:'caffeine'},
+  {name:'Bang (16 oz)',mg:300,emoji:'💥',type:'caffeine'},
+  {name:'Celsius (12 oz)',mg:200,emoji:'🔥',type:'caffeine'},
+  {name:'Ghost Energy',mg:200,emoji:'👻',type:'caffeine'},
+  {name:'Rockstar (16 oz)',mg:160,emoji:'⚡',type:'caffeine'},
+  {name:'5-Hour Energy',mg:200,emoji:'⚡',type:'caffeine'},
+  {name:'Reign (16 oz)',mg:300,emoji:'👑',type:'caffeine'},
+  {name:'C4 Energy (16 oz)',mg:200,emoji:'💪',type:'caffeine'},
+  {name:'Prime Energy (12 oz)',mg:200,emoji:'⚡',type:'caffeine'},
+  {name:'Alani Nu (12 oz)',mg:200,emoji:'🌸',type:'caffeine'},
+  {name:'NOS (16 oz)',mg:160,emoji:'⚡',type:'caffeine'},
+  // SODA
+  {name:'Coca-Cola (12 oz)',mg:34,emoji:'🥤',type:'caffeine'},
+  {name:'Diet Coke (12 oz)',mg:46,emoji:'🥤',type:'caffeine'},
+  {name:'Pepsi (12 oz)',mg:38,emoji:'🥤',type:'caffeine'},
+  {name:'Mountain Dew (12 oz)',mg:54,emoji:'🥤',type:'caffeine'},
+  {name:'Dr Pepper (12 oz)',mg:41,emoji:'🥤',type:'caffeine'},
+  // PRE-WORKOUT
+  {name:'C4 Pre-Workout',mg:150,emoji:'🏋️',type:'caffeine'},
+  {name:'Ghost Legend',mg:250,emoji:'👻',type:'caffeine'},
+  {name:'Reign Total Body',mg:300,emoji:'💥',type:'caffeine'},
+  {name:'Total War Pre',mg:320,emoji:'⚔️',type:'caffeine'},
+  // FOOD/SUPPLEMENTS
+  {name:'Dark chocolate (1 oz)',mg:23,emoji:'🍫',type:'caffeine'},
+  {name:'Caffeine pill 100mg',mg:100,emoji:'💊',type:'caffeine'},
+  {name:'Caffeine pill 200mg',mg:200,emoji:'💊',type:'caffeine'},
+  // ADDERALL IR
+  {name:'Adderall IR 5mg',mg:5,emoji:'💊',type:'adderall_ir'},
+  {name:'Adderall IR 10mg',mg:10,emoji:'💊',type:'adderall_ir'},
+  {name:'Adderall IR 15mg',mg:15,emoji:'💊',type:'adderall_ir'},
+  {name:'Adderall IR 20mg',mg:20,emoji:'💊',type:'adderall_ir'},
+  {name:'Adderall IR 25mg',mg:25,emoji:'💊',type:'adderall_ir'},
+  {name:'Adderall IR 30mg',mg:30,emoji:'💊',type:'adderall_ir'},
+  // ADDERALL XR
+  {name:'Adderall XR 5mg',mg:5,emoji:'💊',type:'adderall_xr'},
+  {name:'Adderall XR 10mg',mg:10,emoji:'💊',type:'adderall_xr'},
+  {name:'Adderall XR 15mg',mg:15,emoji:'💊',type:'adderall_xr'},
+  {name:'Adderall XR 20mg',mg:20,emoji:'💊',type:'adderall_xr'},
+  {name:'Adderall XR 25mg',mg:25,emoji:'💊',type:'adderall_xr'},
+  {name:'Adderall XR 30mg',mg:30,emoji:'💊',type:'adderall_xr'},
+];
+
+// ── App state ──────────────────────────────────────────────────────────────────
+const S = {
+  wakeH: 7, bedH: 23, weightKg: 75, recoveryScore: null,
+  chartMode: 'line', scrubH: null, filter: 'all', query: '',
+};
+
+// ── Storage ────────────────────────────────────────────────────────────────────
+const load  = k => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch(e) { return []; } };
+const saveLs = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const loadLogs   = () => load('caf:logs');
+const loadCustom = () => load('caf:custom');
+const todayLogs  = () => loadLogs().filter(l => l.date === TODAY);
+
+// ── PK math ────────────────────────────────────────────────────────────────────
+function activeMgAt(dose, logH, evalH, type) {
+  const t = evalH - logH;
+  if (t < 0) return 0;
+  const {peakH, halfLife} = PK[type] || PK.caffeine;
+  const ramp  = Math.min(1, t / Math.max(peakH, 0.01));
+  const decay = Math.pow(0.5, Math.max(0, t - peakH) / halfLife);
+  return dose * ramp * decay;
+}
+function logH(iso) { const d = new Date(iso); return d.getHours() + d.getMinutes()/60; }
+function activeTotals(logs, evalH) {
+  const r = {caffeine:0, adderall_ir:0, adderall_xr:0};
+  for (const l of logs) {
+    if (l.date !== TODAY) continue;
+    const t = l.type || 'caffeine';
+    if (t in r) r[t] += activeMgAt(l.mg, logH(l.time), evalH, t);
+  }
+  return r;
+}
+
+// ── Energy model ───────────────────────────────────────────────────────────────
+const gauss = (x,mu,sd) => Math.exp(-0.5*Math.pow((x-mu)/sd,2));
+const circ  = h => 50 + 18*Math.cos(TAU*(h-16.5)/24);
+
+function energyAt(h, logs) {
+  const asleep = h < S.wakeH || h >= S.bedH;
+  const c = circ(h);
+  if (asleep) return Math.max(3, Math.min(20, c - 34));
+  const ha = h - S.wakeH;
+  const mgs = activeTotals(logs, h);
+  const e = c
+    - 10*gauss(h, 14, 1.4)
+    - Math.min(ha, 24)*1.7
+    + 10*gauss(ha, 1.2, 0.9)
+    + BOOST.caffeine(mgs.caffeine)
+    + BOOST.adderall_ir(mgs.adderall_ir + mgs.adderall_xr);
+  return Math.max(3, Math.min(100, e));
+}
+
+function sample(logs, stepsPerH=6) {
+  const pts = [];
+  for (let i=0; i<=24*stepsPerH; i++) {
+    const h = i/stepsPerH;
+    pts.push({h, e: energyAt(h, logs)});
+  }
+  return pts;
+}
+
+// ── Formatting ─────────────────────────────────────────────────────────────────
+function fmtH(h) {
+  if (h == null || isNaN(h)) return '–';
+  const m = Math.round(h * 60) % (24*60);
+  const hh = Math.floor(m/60), mm = m%60;
+  const a = hh>=12 ? 'pm' : 'am';
+  return (hh%12||12) + (mm ? ':'+String(mm).padStart(2,'0') : '') + ' '+a;
+}
+function eColor(e) { return e>=62 ? '#6BE3A4' : e>=40 ? '#F2C063' : '#FF6B6B'; }
+function eState(e) { return e>=78?'Peak':e>=62?'High':e>=50?'Steady':e>=40?'Dip':'Low'; }
+
+// ── SVG curve ──────────────────────────────────────────────────────────────────
+const W=800, H=160;
+const hx = h => (h/24)*W;
+const ey = e => H - (e/100)*H;
+function pathStr(pts, close=false) {
+  if (!pts.length) return '';
+  let d = 'M'+pts[0].x+','+pts[0].y;
+  for (let i=1;i<pts.length;i++) d += 'L'+pts[i].x+','+pts[i].y;
+  if (close) d += 'L'+pts[pts.length-1].x+','+H+'L'+pts[0].x+','+H+'Z';
+  return d;
+}
+
+let _ptsCache = null, _ptsHash = '';
+function cachedPts(logs) {
+  const hash = logs.map(l=>l.id).join(',');
+  if (hash !== _ptsHash) { _ptsCache = sample(logs); _ptsHash = hash; }
+  return _ptsCache;
+}
+
+function renderCurveLayer(logs) {
+  const layer = document.getElementById('curveLayer');
+  if (!layer) return;
+  const pts  = cachedPts(logs).map(p => ({x:hx(p.h), y:ey(p.e)}));
+  const base = sample([]).map(p => ({x:hx(p.h), y:ey(p.e)}));
+  const nowH = new Date().getHours() + new Date().getMinutes()/60;
+  const nowE = energyAt(nowH, logs);
+  const mode = S.chartMode;
+
+  let html = `<defs>
+<filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+  <feGaussianBlur stdDeviation="2.5" result="b"/>
+  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<linearGradient id="cGrad" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#C9A36B" stop-opacity="0.38"/>
+  <stop offset="100%" stop-color="#C9A36B" stop-opacity="0.02"/>
+</linearGradient>
+<linearGradient id="bGrad" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#76746E" stop-opacity="0.22"/>
+  <stop offset="100%" stop-color="#76746E" stop-opacity="0.01"/>
+</linearGradient>
+</defs>`;
+
+  // Night bands
+  html += `<rect x="0" y="0" width="${hx(S.wakeH)}" height="${H}" fill="rgba(0,0,0,0.3)"/>`;
+  if (S.bedH < 24) html += `<rect x="${hx(S.bedH)}" y="0" width="${hx(24)-hx(S.bedH)}" height="${H}" fill="rgba(0,0,0,0.3)"/>`;
+  // Grid
+  for (let h=0;h<=24;h+=3) {
+    const x=hx(h);
+    html += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
+  }
+
+  if (mode==='bars') {
+    const bw = W/24 - 2;
+    for (let h=0;h<24;h++) {
+      const e2 = energyAt(h+0.5, logs);
+      const bh = (e2/100)*H;
+      html += `<rect x="${hx(h)+1}" y="${H-bh}" width="${bw}" height="${bh}" fill="${eColor(e2)}" opacity="0.65" rx="2"/>`;
+    }
+  } else {
+    if (mode==='stack') {
+      html += `<path d="${pathStr(base,true)}" fill="url(#bGrad)"/>`;
+      html += `<path d="${pathStr(base)}" fill="none" stroke="rgba(118,116,110,0.5)" stroke-width="1.5"/>`;
+    }
+    html += `<path d="${pathStr(pts,true)}" fill="url(#cGrad)"/>`;
+    html += `<path d="${pathStr(pts)}" fill="none" stroke="#C9A36B" stroke-width="2.5" filter="url(#glow)"/>`;
+  }
+
+  // Hour labels
+  [['12a',0],['6a',6],['12p',12],['6p',18],['12a',24]].forEach(([l,h]) => {
+    html += `<text x="${hx(h)}" y="${H-3}" fill="rgba(118,116,110,0.75)" font-size="20" font-family="monospace" text-anchor="middle">${l}</text>`;
+  });
+
+  // Now line + dot
+  const nx = hx(nowH), ny = ey(nowE), nc = eColor(nowE);
+  html += `<line x1="${nx}" y1="0" x2="${nx}" y2="${H-20}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+  html += `<circle cx="${nx}" cy="${ny}" r="4.5" fill="${nc}" filter="url(#glow)"/>`;
+  html += `<circle cx="${nx}" cy="${ny}" r="8" fill="${nc}" opacity="0.18"/>`;
+
+  layer.innerHTML = html;
+}
+
+function renderScrubLayer(logs) {
+  const layer = document.getElementById('scrubLayer');
+  if (!layer) return;
+  if (S.scrubH === null) { layer.innerHTML = ''; return; }
+  const sx = hx(S.scrubH);
+  const se = energyAt(S.scrubH, logs);
+  const sy = ey(se);
+  layer.innerHTML = `
+<line x1="${sx}" y1="0" x2="${sx}" y2="${H-20}" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+<circle cx="${sx}" cy="${sy}" r="5" fill="#FAFAFA"/>`;
+}
+
+// ── Ring ───────────────────────────────────────────────────────────────────────
+function renderRing(e) {
+  const r = 46, circ2 = TAU * r;
+  const dash = Math.max(0, Math.min(1, e/100)) * circ2;
+  const col = eColor(e);
+  const fill = document.getElementById('ringFill');
+  if (fill) {
+    fill.setAttribute('stroke', col);
+    fill.setAttribute('stroke-dasharray', dash + ' ' + (circ2 - dash));
+  }
+  const numEl = document.getElementById('ringNum');
+  if (numEl) { numEl.textContent = Math.round(e); numEl.style.color = col; }
+  const stEl = document.getElementById('ringState');
+  if (stEl) stEl.textContent = eState(e);
+  const subEl = document.getElementById('ringSubtext');
+  if (subEl) subEl.textContent = S.scrubH !== null ? fmtH(S.scrubH) : 'RIGHT NOW';
+  const hintEl = document.getElementById('dayHint');
+  if (hintEl) hintEl.textContent = eState(e) + ' energy · drag the curve to scrub';
+}
+
+// ── Timing ─────────────────────────────────────────────────────────────────────
+function findPeak(pts) {
+  let best={h:null,e:-1};
+  for (const p of pts) {
+    if (p.h<S.wakeH || p.h>=S.bedH) continue;
+    if (p.e>best.e) best={h:p.h,e:p.e};
+  }
+  return best.h!==null ? best : null;
+}
+function findCrash(pts, nowH) {
+  let maxDrop=0, res=null;
+  for (let i=0;i<pts.length-6;i++) {
+    if (pts[i].h<nowH||pts[i].h>nowH+8) continue;
+    const drop = pts[i].e - pts[i+6].e;
+    if (drop>maxDrop && drop>8) { maxDrop=drop; res={h:pts[i+6].h, low:Math.round(pts[i+6].e)}; }
+  }
+  return res;
+}
+function calcCutoff() {
+  return Math.max(S.wakeH, S.bedH - 0.75 - 5*Math.log2(200/30));
+}
+
+function renderTiming(logs) {
+  const pts  = cachedPts(logs);
+  const nowH = new Date().getHours() + new Date().getMinutes()/60;
+  const peak = findPeak(pts);
+  const crash= findCrash(pts, nowH);
+  const cut  = calcCutoff();
+
+  const el = id => document.getElementById(id);
+  if (el('footerPeak'))   el('footerPeak').textContent   = peak ? fmtH(peak.h) : '–';
+  if (el('footerCrash'))  el('footerCrash').textContent  = crash ? fmtH(crash.h) : 'None';
+  if (el('footerCutoff')) el('footerCutoff').textContent = fmtH(cut);
+
+  const tp = el('tileProd');
+  if (tp) tp.innerHTML = `<div class="timing-label">Most Productive</div>
+<div class="timing-value">${peak?fmtH(peak.h):'–'}</div>
+<div class="timing-sub">${peak?'Score '+Math.round(peak.e)+' · ends ~'+fmtH(peak.h+1.5):'Calculating…'}</div>`;
+
+  const tc = el('tileCrash');
+  if (tc) tc.innerHTML = `<div class="timing-label">Crash Risk</div>
+<div class="timing-value" style="color:${crash?'#FF6B6B':'#6BE3A4'}">${crash?fmtH(crash.h):'None'}</div>
+<div class="timing-sub">${crash?'Drops to '+crash.low+'/100':'No significant crash predicted'}</div>`;
+
+  const tcu = el('tileCutoff');
+  if (tcu) tcu.innerHTML = `<div class="timing-label">Coffee Cutoff</div>
+<div class="timing-value">${fmtH(cut)}</div>
+<div class="timing-sub">Clears to &lt;30 mg by ${fmtH(S.bedH)}</div>`;
+
+  const tips = buildTips(logs, peak, crash, cut, nowH);
+  const tl = el('tipsList');
+  if (tl) tl.innerHTML = tips.map(t=>`<li class="tip-item"><span class="tip-icon">${t.i}</span><span>${t.t}</span></li>`).join('');
+}
+
+function buildTips(logs, peak, crash, cut, nowH) {
+  const tips=[];
+  if (nowH < S.wakeH + 2) {
+    tips.push({i:'⏰', t:'Front-load before noon — cortisol peaks 30–90 min after waking and amplifies caffeine. Delaying your first cup until after 9 AM sharpens that cortisol spike.'});
+  }
+  const tocut = cut - nowH;
+  if (tocut > 0) {
+    tips.push({i:'🌙', t:`Coffee cutoff in ${tocut>1?Math.round(tocut)+'h':'under 1h'} (${fmtH(cut)}). Caffeine after that leaves 30+ mg active at bedtime and adds ~20 min to sleep onset.`});
+  } else {
+    tips.push({i:'✅', t:`Past your ${fmtH(cut)} cutoff — good. Caffeine will clear before ${fmtH(S.bedH)}.`});
+  }
+  if (crash && crash.h - nowH < 4) {
+    tips.push({i:'☀️', t:`Beat your ${fmtH(crash.h)} crash: 10 min of daylight before the dip resets adenosine sensitivity and raises energy 8–12 pts without caffeine.`});
+  }
+  tips.push({i:'💧', t:'Caffeine is mildly diuretic. Drink an extra 500 ml water for every 300 mg consumed — dehydration alone drops energy ~10 pts.'});
+  if (S.recoveryScore !== null && S.recoveryScore < 60) {
+    tips.push({i:'⚠️', t:`Low Google Health sleep quality (~${S.recoveryScore}). Today's stimulants will hit harder and fade faster — minimize doses and avoid stacking caffeine + Adderall.`});
+  }
+  const amp = logs.filter(l=>l.date===TODAY&&(l.type==='adderall_ir'||l.type==='adderall_xr'));
+  if (amp.length>0) {
+    tips.push({i:'💊', t:'Adderall + caffeine stacking amplifies cardiovascular stress and anxiety. Replace your afternoon coffee with water or a walk while Adderall is active.'});
+  }
+  return tips;
+}
+
+// ── Today card ────────────────────────────────────────────────────────────────
+function renderToday(logs) {
+  const card = document.getElementById('todayCard');
+  if (!card) return;
+  const today = logs.filter(l=>l.date===TODAY);
+  const totalCaf = today.filter(l=>l.type==='caffeine').reduce((s,l)=>s+l.mg,0);
+  const totalAmp = today.filter(l=>l.type==='adderall_ir'||l.type==='adderall_xr').reduce((s,l)=>s+l.mg,0);
+  const nowH = new Date().getHours() + new Date().getMinutes()/60;
+  const active = activeTotals(logs, nowH);
+  const cafLimit = S.recoveryScore!==null&&S.recoveryScore<50 ? 200 : S.recoveryScore!==null&&S.recoveryScore<65 ? 300 : FDA_CAF;
+  const cafPct = Math.min(1, totalCaf/cafLimit);
+  const cafCol = cafPct>=0.85?'#FF6B6B':cafPct>=0.65?'#F2C063':'#6BE3A4';
+  const target = Math.round(S.weightKg*3);
+  const activeAmp = active.adderall_ir + active.adderall_xr;
+
+  const noteParts=[];
+  noteParts.push(`Body-weight target ≈ <strong>${target} mg</strong> caffeine/day (3 mg/kg).`);
+  if (S.recoveryScore!==null&&S.recoveryScore<50) noteParts.push('⚠️ Low Google Health sleep score — ceiling dropped to 200 mg.');
+  else if (S.recoveryScore!==null&&S.recoveryScore<65) noteParts.push('⚡ Moderate recovery — ceiling reduced to 300 mg.');
+  if (totalCaf>cafLimit*0.9) noteParts.push('🚨 Near daily ceiling — stop caffeine now and hydrate.');
+  else if (totalCaf>cafLimit*0.7) noteParts.push('☕ Plenty today. Make your next one your last.');
+  if (totalAmp>0) noteParts.push('💊 Adderall active — avoid stacking additional caffeine.');
+
+  card.innerHTML = `
+<div class="mg-bar-wrap">
+  <div class="mg-bar-header">
+    <span class="mg-bar-label">☕ Caffeine today</span>
+    <span class="mg-bar-value">${Math.round(totalCaf)} / ${cafLimit} mg</span>
+  </div>
+  <div class="mg-bar-track"><div class="mg-bar-fill" style="width:${cafPct*100}%;background:${cafCol}"></div></div>
+</div>
+${totalAmp>0?`<div class="mg-bar-wrap">
+  <div class="mg-bar-header"><span class="mg-bar-label">💊 Adderall today</span><span class="mg-bar-value">${Math.round(totalAmp)} mg</span></div>
+</div>`:''}
+<div class="active-now-row">
+${active.caffeine>=5?`<span class="active-badge"><span class="active-dot" style="background:#C9A36B"></span>${Math.round(active.caffeine)} mg caffeine active</span>`:''}
+${activeAmp>=1?`<span class="active-badge"><span class="active-dot" style="background:#A78BFA;box-shadow:0 0 8px rgba(167,139,250,0.7)"></span>${Math.round(activeAmp)} mg Adderall active</span>`:''}
+${active.caffeine<5&&activeAmp<1?'<span class="active-badge">No stimulants active</span>':''}
+</div>
+<div class="note-card">${noteParts.join(' ')}</div>`;
+}
+
+// ── Drink grid ────────────────────────────────────────────────────────────────
+function allDrinks() { return [...DB, ...loadCustom().map(c=>({...c,isCustom:true}))]; }
+function renderDrinkGrid() {
+  const grid = document.getElementById('drinkGrid');
+  if (!grid) return;
+  const q = S.query.toLowerCase();
+  const f = S.filter;
+  const list = allDrinks().filter(d => {
+    const mq = !q || d.name.toLowerCase().includes(q) || d.type.includes(q);
+    const mf = f==='all' || (f==='caffeine'&&d.type==='caffeine') || (f==='adderall'&&(d.type==='adderall_ir'||d.type==='adderall_xr'));
+    return mq&&mf;
+  });
+  if (!list.length) { grid.innerHTML='<div style="color:var(--text-tertiary);font-size:13px;padding:20px;grid-column:1/-1;text-align:center">No results</div>'; return; }
+  grid.innerHTML = list.map(d=>{
+    const tag = d.type==='adderall_ir'?'Adderall IR':d.type==='adderall_xr'?'Adderall XR':'';
+    return `<div class="drink-item" data-name="${encodeURIComponent(d.name)}" data-mg="${d.mg}" data-type="${d.type}" data-emoji="${d.emoji||'☕'}">
+<span class="drink-emoji">${d.emoji||'☕'}</span>
+<div class="drink-name">${d.name}${d.isCustom?' ✎':''}</div>
+<div class="drink-mg">${d.mg} mg</div>
+${tag?`<div class="drink-tag">${tag}</div>`:''}
+</div>`;
+  }).join('');
+}
+
+// ── Log list ──────────────────────────────────────────────────────────────────
+function renderLogList() {
+  const c = document.getElementById('logList');
+  if (!c) return;
+  const today = todayLogs().sort((a,b)=>new Date(b.time)-new Date(a.time));
+  if (!today.length) { c.innerHTML='<div class="empty-state">Nothing logged today.</div>'; return; }
+  const nowH = new Date().getHours() + new Date().getMinutes()/60;
+  c.innerHTML = today.map(e=>{
+    const pk  = PK[e.type] || PK.caffeine;
+    const lh  = logH(e.time);
+    const peakAt = lh + pk.peakH;
+    const halfAt = lh + pk.halfLife;
+    const clrAt  = lh + pk.peakH + pk.halfLife * Math.log2(e.mg / pk.clear);
+    const ms = (lbl,h) => `<span class="ms${nowH>h?' done':''}">${lbl}: ${fmtH(h)}</span>`;
+    const timeStr = new Date(e.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    return `<div class="log-entry">
+<span class="log-emoji">${e.emoji||'☕'}</span>
+<div class="log-body">
+<div class="log-name">${e.name} <span style="font-family:var(--font-mono);font-size:11px;color:${pk.color};font-weight:700">${e.mg} mg ${pk.label}</span></div>
+<div class="log-time-str">${timeStr}</div>
+<div class="log-milestones">${ms('⚡ Peak',peakAt)}${ms('½ Gone',halfAt)}${ms('Cleared',clrAt)}</div>
+</div>
+<button class="log-del" data-id="${e.id}">×</button>
+</div>`;
+  }).join('');
+}
+
+// ── Log a drink ───────────────────────────────────────────────────────────────
+function logDrink(d) {
+  const logs = loadLogs();
+  logs.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,8), date:TODAY, time:new Date().toISOString(), name:d.name, mg:d.mg, type:d.type||'caffeine', emoji:d.emoji||'☕' });
+  saveLs('caf:logs', logs);
+  _ptsHash=''; // invalidate cache
+  rerender();
+}
+
+// ── Master render ─────────────────────────────────────────────────────────────
+function rerender() {
+  const logs = loadLogs();
+  const nowH = new Date().getHours() + new Date().getMinutes()/60;
+  const evalH = S.scrubH !== null ? S.scrubH : nowH;
+  renderRing(energyAt(evalH, logs));
+  renderCurveLayer(logs);
+  renderScrubLayer(logs);
+  renderTiming(logs);
+  renderToday(logs);
+  renderLogList();
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+function initEvents() {
+  // Chart mode
+  document.querySelectorAll('.chart-btn').forEach(b=>b.addEventListener('click',()=>{
+    S.chartMode=b.dataset.mode;
+    document.querySelectorAll('.chart-btn').forEach(x=>x.classList.toggle('active',x===b));
+    _ptsHash=''; renderCurveLayer(loadLogs());
+  }));
+
+  // Type filter
+  document.querySelectorAll('.type-tab').forEach(t=>t.addEventListener('click',()=>{
+    S.filter=t.dataset.filter;
+    document.querySelectorAll('.type-tab').forEach(x=>x.classList.toggle('active',x===t));
+    renderDrinkGrid();
+  }));
+
+  // Search
+  const srch = document.getElementById('drinkSearch');
+  if (srch) srch.addEventListener('input',()=>{S.query=srch.value;renderDrinkGrid();});
+
+  // Drink click
+  const grid = document.getElementById('drinkGrid');
+  if (grid) grid.addEventListener('click',e=>{
+    const item = e.target.closest('.drink-item');
+    if (!item) return;
+    logDrink({name:decodeURIComponent(item.dataset.name),mg:+item.dataset.mg,type:item.dataset.type,emoji:item.dataset.emoji});
+    item.style.background='rgba(201,163,107,0.22)';
+    setTimeout(()=>item.style.background='',400);
+  });
+
+  // Custom add
+  const cadd = document.getElementById('custAdd');
+  if (cadd) cadd.addEventListener('click',()=>{
+    const name=(document.getElementById('custName').value||'').trim();
+    const mg=parseInt(document.getElementById('custMg').value||'0');
+    const type=document.getElementById('custType').value;
+    if (!name||!mg||mg<=0) return;
+    const custom=loadCustom();
+    const emoji=type.startsWith('adderall')?'💊':'☕';
+    if (!custom.find(c=>c.name===name&&c.type===type)) { custom.push({name,mg,type,emoji}); saveLs('caf:custom',custom); }
+    logDrink({name,mg,type,emoji});
+    document.getElementById('custName').value='';
+    document.getElementById('custMg').value='';
+    renderDrinkGrid();
+  });
+
+  // Log delete
+  const logList=document.getElementById('logList');
+  if (logList) logList.addEventListener('click',e=>{
+    const btn=e.target.closest('.log-del');
+    if (!btn) return;
+    saveLs('caf:logs',loadLogs().filter(l=>l.id!==btn.dataset.id));
+    _ptsHash=''; rerender();
+  });
+
+  // Chart scrub
+  const cw = document.getElementById('chartWrap');
+  if (cw) {
+    const getH = cx => {
+      const r = cw.getBoundingClientRect();
+      return Math.max(0, Math.min(24, ((cx - r.left) / r.width) * 24));
+    };
+    cw.addEventListener('mousemove', e => {
+      S.scrubH = getH(e.clientX);
+      const logs = loadLogs();
+      renderRing(energyAt(S.scrubH, logs));
+      renderScrubLayer(logs);
+    });
+    cw.addEventListener('mouseleave', () => { S.scrubH=null; rerender(); });
+    cw.addEventListener('touchmove', e => {
+      e.preventDefault();
+      S.scrubH = getH(e.touches[0].clientX);
+      const logs = loadLogs();
+      renderRing(energyAt(S.scrubH, logs));
+      renderScrubLayer(logs);
+    }, {passive:false});
+    cw.addEventListener('touchend', () => { S.scrubH=null; rerender(); });
+  }
+
+  window.addEventListener('storage', () => { _ptsHash=''; rerender(); });
+}
+
+// ── Google Health (Fitbit) ────────────────────────────────────────────────────
+async function loadFitbit() {
+  const token = localStorage.getItem('fitbit_access_token');
+  const exp   = parseInt(localStorage.getItem('fitbit_token_exp')||'0');
+  if (!token || Date.now() > exp) return;
+  try {
+    const resp = await fetch('https://api.fitbit.com/1.2/user/-/sleep/date/'+TODAY+'.json',
+      {headers:{Authorization:'Bearer '+token}});
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.sleep && data.sleep.length) {
+      const main = data.sleep.find(s=>s.isMainSleep) || data.sleep[0];
+      const wakeDate = new Date(main.endTime);
+      S.wakeH = wakeDate.getHours() + wakeDate.getMinutes()/60;
+      if (main.efficiency) {
+        S.recoveryScore = main.efficiency < 80 ? 40 : main.efficiency < 90 ? 65 : 85;
+      }
+      _ptsHash=''; rerender();
+    }
+  } catch(e) {}
+}
+
+function loadWeight() {
+  try {
+    const w = JSON.parse(localStorage.getItem('po_water_v1'));
+    if (w?.profile?.weightKg) {
+      S.weightKg = w.weightUnit==='lb' ? w.profile.weightKg/2.20462 : w.profile.weightKg;
+    }
+  } catch(e) {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  loadWeight();
+  renderDrinkGrid();
+  rerender();
+  initEvents();
+  loadFitbit();
+  if (window.initCloudSync) {
+    window.initCloudSync({appKey:'caffeine',syncedKeys:['caf:logs','caf:custom'],onApplied:()=>{_ptsHash='';rerender();}});
+  }
+  setInterval(() => { _ptsHash=''; rerender(); }, 60*1000);
+}
+
+if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+else init();
+
+})();
+</script>
+</body>
+</html>
