@@ -264,9 +264,9 @@ body::after {
       </div>
 
       <div class="chart-toggle">
-        <button class="chart-btn active" data-mode="line" type="button">LINE</button>
-        <button class="chart-btn" data-mode="bars" type="button">BARS</button>
-        <button class="chart-btn" data-mode="stack" type="button">STACK</button>
+        <button class="chart-btn active" data-mode="line" type="button" onclick="cafMode('line')">LINE</button>
+        <button class="chart-btn" data-mode="bars" type="button" onclick="cafMode('bars')">BARS</button>
+        <button class="chart-btn" data-mode="stack" type="button" onclick="cafMode('stack')">STACK</button>
       </div>
       <div class="chart-wrap" id="chartWrap">
         <svg id="energySvg" viewBox="0 0 800 160" preserveAspectRatio="none">
@@ -332,9 +332,9 @@ body::after {
         <input class="drink-search" id="drinkSearch" placeholder="Search caffeine, adderall…" autocomplete="off">
       </div>
       <div class="type-tabs">
-        <button class="type-tab active" data-filter="all" type="button">All</button>
-        <button class="type-tab" data-filter="caffeine" type="button">☕ Caffeine</button>
-        <button class="type-tab" data-filter="adderall" type="button">💊 Adderall</button>
+        <button class="type-tab active" data-filter="all" type="button" onclick="cafFilter('all')">All</button>
+        <button class="type-tab" data-filter="caffeine" type="button" onclick="cafFilter('caffeine')">☕ Caffeine</button>
+        <button class="type-tab" data-filter="adderall" type="button" onclick="cafFilter('adderall')">💊 Adderall</button>
       </div>
       <div class="drink-grid" id="drinkGrid"></div>
       <div class="custom-form">
@@ -346,7 +346,7 @@ body::after {
           <option value="adderall_ir">Adderall IR</option>
           <option value="adderall_xr">Adderall XR</option>
         </select>
-        <button class="gm-add" id="custAdd" type="button">Log</button>
+        <button class="gm-add" id="custAdd" type="button" onclick="cafCustomAdd()">Log</button>
       </div>
     </div>
   </div>
@@ -761,20 +761,21 @@ ${active.caffeine<5&&activeAmp<1?'<span class="active-badge">No stimulants activ
 
 // ── Drink grid ────────────────────────────────────────────────────────────────
 function allDrinks() { return [...DB, ...loadCustom().map(c=>({...c,isCustom:true}))]; }
+let _drinkList = [];
 function renderDrinkGrid() {
   const grid = document.getElementById('drinkGrid');
   if (!grid) return;
   const q = S.query.toLowerCase();
   const f = S.filter;
-  const list = allDrinks().filter(d => {
+  _drinkList = allDrinks().filter(d => {
     const mq = !q || d.name.toLowerCase().includes(q) || d.type.includes(q);
     const mf = f==='all' || (f==='caffeine'&&d.type==='caffeine') || (f==='adderall'&&(d.type==='adderall_ir'||d.type==='adderall_xr'));
     return mq&&mf;
   });
-  if (!list.length) { grid.innerHTML='<div style="color:var(--text-tertiary);font-size:13px;padding:20px;grid-column:1/-1;text-align:center">No results</div>'; return; }
-  grid.innerHTML = list.map(d=>{
+  if (!_drinkList.length) { grid.innerHTML='<div style="color:var(--text-tertiary);font-size:13px;padding:20px;grid-column:1/-1;text-align:center">No results</div>'; return; }
+  grid.innerHTML = _drinkList.map((d,i)=>{
     const tag = d.type==='adderall_ir'?'Adderall IR':d.type==='adderall_xr'?'Adderall XR':'';
-    return `<div class="drink-item" data-name="${encodeURIComponent(d.name)}" data-mg="${d.mg}" data-type="${d.type}" data-emoji="${d.emoji||'☕'}">
+    return `<div class="drink-item" onclick="cafLogDrink(${i})">
 <span class="drink-emoji">${d.emoji||'☕'}</span>
 <div class="drink-name">${d.name}${d.isCustom?' ✎':''}</div>
 <div class="drink-mg">${d.mg} mg</div>
@@ -843,51 +844,48 @@ function rerender() {
   renderLogList();
 }
 
+// ── Window-level handlers (used by inline onclick attributes) ─────────────────
+window.cafMode = function(mode) {
+  S.chartMode = mode;
+  document.querySelectorAll('.chart-btn').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
+  _ptsHash=''; renderCurveLayer(loadLogs());
+};
+window.cafFilter = function(filter) {
+  S.filter = filter;
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.toggle('active', t.dataset.filter===filter));
+  renderDrinkGrid();
+};
+window.cafCustomAdd = function() {
+  const name=(document.getElementById('custName').value||'').trim();
+  const mg=parseInt(document.getElementById('custMg').value||'0');
+  const type=document.getElementById('custType').value;
+  if (!name||!mg||mg<=0) return;
+  const custom=loadCustom();
+  const emoji=type.startsWith('adderall')?'💊':'☕';
+  if (!custom.find(c=>c.name===name&&c.type===type)) { custom.push({name,mg,type,emoji}); saveLs('caf:custom',custom); }
+  logDrink({name,mg,type,emoji});
+  document.getElementById('custName').value='';
+  document.getElementById('custMg').value='';
+  renderDrinkGrid();
+};
+window.cafLogDrink = function(idx) {
+  const d = _drinkList[idx];
+  if (!d) return;
+  const items = document.querySelectorAll('.drink-item');
+  if (items[idx]) { items[idx].style.background='rgba(201,163,107,0.22)'; setTimeout(()=>items[idx].style.background='',400); }
+  logDrink(d);
+};
+
 // ── Events ────────────────────────────────────────────────────────────────────
 function initEvents() {
-  // Chart mode
-  document.querySelectorAll('.chart-btn').forEach(b=>b.addEventListener('click',()=>{
-    S.chartMode=b.dataset.mode;
-    document.querySelectorAll('.chart-btn').forEach(x=>x.classList.toggle('active',x===b));
-    _ptsHash=''; renderCurveLayer(loadLogs());
-  }));
+  // Chart mode — also handled by inline onclick on buttons
+  // Type filter — also handled by inline onclick on buttons
 
-  // Type filter
-  document.querySelectorAll('.type-tab').forEach(t=>t.addEventListener('click',()=>{
-    S.filter=t.dataset.filter;
-    document.querySelectorAll('.type-tab').forEach(x=>x.classList.toggle('active',x===t));
-    renderDrinkGrid();
-  }));
+  // Kept for backwards-compat with any dynamically-injected buttons
 
   // Search
   const srch = document.getElementById('drinkSearch');
   if (srch) srch.addEventListener('input',()=>{S.query=srch.value;renderDrinkGrid();});
-
-  // Drink click
-  const grid = document.getElementById('drinkGrid');
-  if (grid) grid.addEventListener('click',e=>{
-    const item = e.target.closest('.drink-item');
-    if (!item) return;
-    logDrink({name:decodeURIComponent(item.dataset.name),mg:+item.dataset.mg,type:item.dataset.type,emoji:item.dataset.emoji});
-    item.style.background='rgba(201,163,107,0.22)';
-    setTimeout(()=>item.style.background='',400);
-  });
-
-  // Custom add
-  const cadd = document.getElementById('custAdd');
-  if (cadd) cadd.addEventListener('click',()=>{
-    const name=(document.getElementById('custName').value||'').trim();
-    const mg=parseInt(document.getElementById('custMg').value||'0');
-    const type=document.getElementById('custType').value;
-    if (!name||!mg||mg<=0) return;
-    const custom=loadCustom();
-    const emoji=type.startsWith('adderall')?'💊':'☕';
-    if (!custom.find(c=>c.name===name&&c.type===type)) { custom.push({name,mg,type,emoji}); saveLs('caf:custom',custom); }
-    logDrink({name,mg,type,emoji});
-    document.getElementById('custName').value='';
-    document.getElementById('custMg').value='';
-    renderDrinkGrid();
-  });
 
   // Log delete
   const logList=document.getElementById('logList');
@@ -960,7 +958,7 @@ function loadWeight() {
 function init() {
   loadWeight();
   renderDrinkGrid();
-  rerender();
+  try { rerender(); } catch(e) { console.error('caffeine rerender:', e); }
   initEvents();
   loadFitbit();
   if (window.initCloudSync) {

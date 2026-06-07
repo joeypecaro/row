@@ -331,14 +331,64 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     sync();
   }
 
+  function applyDisplaySettings() {
+    let s;
+    try { s = JSON.parse(localStorage.getItem('display_settings')); } catch (e) {}
+    if (!s || typeof s !== 'object') s = {};
+
+    const theme   = s.theme    || 'dark';
+    const accent  = s.accent   || '#C9A36B';
+    const fsz     = s.fontSize || 'medium';
+    const density = s.density  || 'comfortable';
+
+    let out = ':root { --accent: ' + accent + '; }\n';
+
+    const fszMap = { small: '13px', medium: '15px', large: '17px' };
+    out += 'html { font-size: ' + (fszMap[fsz] || '15px') + '; }\n';
+
+    if (density === 'compact') {
+      document.body.classList.add('density-compact');
+      out += '.gm-card, .section-card, .card { padding: 12px !important; }\n';
+    } else {
+      document.body.classList.remove('density-compact');
+    }
+
+    if (theme === 'light') {
+      document.documentElement.classList.add('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+      out += 'html, body { background: #F4F3EF !important; color: #1A1A1A !important; }\n';
+      out += ':root { --bg: #F4F3EF; --text-primary: #1A1A1A; --text-secondary: #3A3A3A; --text-tertiary: #666; --text-quaternary: #999; --border: rgba(0,0,0,0.10); --border-soft: rgba(0,0,0,0.06); }\n';
+      out += '.topbar, .bottombar { background: #ECEAE4 !important; border-color: rgba(0,0,0,0.08) !important; }\n';
+    } else if (theme === 'system') {
+      document.documentElement.classList.remove('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+      out += '@media (prefers-color-scheme: light) {\n';
+      out += '  html, body { background: #F4F3EF !important; color: #1A1A1A !important; }\n';
+      out += '  :root { --bg: #F4F3EF; --text-primary: #1A1A1A; --text-secondary: #3A3A3A; --text-tertiary: #666; --text-quaternary: #999; --border: rgba(0,0,0,0.10); --border-soft: rgba(0,0,0,0.06); }\n';
+      out += '  .topbar, .bottombar { background: #ECEAE4 !important; border-color: rgba(0,0,0,0.08) !important; }\n';
+      out += '}\n';
+    } else {
+      document.documentElement.classList.remove('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+    }
+
+    let el = document.getElementById('ds-style');
+    if (!el) { el = document.createElement('style'); el.id = 'ds-style'; document.head.appendChild(el); }
+    el.textContent = out;
+  }
+
   function boot() {
     injectStyleAndHTML();
+    applyDisplaySettings();
     const btn = document.getElementById('topbarWaterAdd');
     if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); addWater(); });
     render();
     lockGestures();
     startModalLock();
-    window.addEventListener('storage', render);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'display_settings' || e.key === null) applyDisplaySettings();
+      render();
+    });
     window.addEventListener('focus', render);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
     setInterval(render, 30 * 1000);

@@ -554,7 +554,7 @@ body::after {
     } catch { return null; }
   }
 
-  function redirectUri() { return window.location.origin + '/settings.html'; }
+  function redirectUri() { return 'https://row-rho-seven.vercel.app/settings.html'; }
 
   function startLogin() {
     const state = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -647,7 +647,38 @@ body::after {
     try { return Object.assign({}, DS_DEFAULTS, JSON.parse(localStorage.getItem(DS_KEY)) || {}); }
     catch { return Object.assign({}, DS_DEFAULTS); }
   }
-  function saveDS(s) { localStorage.setItem(DS_KEY, JSON.stringify(s)); }
+  function applyDisplaySettings() {
+    const s = getDS();
+    const accent  = s.accent   || '#C9A36B';
+    const fsz     = s.fontSize || 'medium';
+    const density = s.density  || 'comfortable';
+    const theme   = s.theme    || 'dark';
+    const fszMap  = { small: '13px', medium: '15px', large: '17px' };
+    let out = ':root { --accent: ' + accent + '; }\n';
+    out += 'html { font-size: ' + (fszMap[fsz] || '15px') + '; }\n';
+    if (density === 'compact') {
+      document.body.classList.add('density-compact');
+    } else {
+      document.body.classList.remove('density-compact');
+    }
+    if (theme === 'light') {
+      document.documentElement.classList.add('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+      out += 'html, body { background: #F4F3EF !important; color: #1A1A1A !important; }\n';
+      out += ':root { --bg: #F4F3EF; --text-primary: #1A1A1A; --text-secondary: #3A3A3A; --text-tertiary: #666; --text-quaternary: #999; --border: rgba(0,0,0,0.10); --border-soft: rgba(0,0,0,0.06); }\n';
+    } else if (theme === 'system') {
+      document.documentElement.classList.remove('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+      out += '@media (prefers-color-scheme: light) { html, body { background: #F4F3EF !important; color: #1A1A1A !important; } :root { --bg: #F4F3EF; --text-primary: #1A1A1A; } }\n';
+    } else {
+      document.documentElement.classList.remove('theme-light');
+      document.documentElement.classList.remove('theme-dark');
+    }
+    let el = document.getElementById('ds-style');
+    if (!el) { el = document.createElement('style'); el.id = 'ds-style'; document.head.appendChild(el); }
+    el.textContent = out;
+  }
+  function saveDS(s) { localStorage.setItem(DS_KEY, JSON.stringify(s)); applyDisplaySettings(); }
 
   function initDisplaySettings() {
     let s = getDS();
@@ -761,6 +792,7 @@ body::after {
       }
     });
 
+    applyDisplaySettings();
     initDisplaySettings();
   }
 

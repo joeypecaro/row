@@ -1,3 +1,6 @@
 {
-  "version": 2
+  "version": 2,
+  "env": {
+    "NEXT_PUBLIC_BASE_URL": "https://row-rho-seven.vercel.app"
+  }
 }
