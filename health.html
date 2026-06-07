@@ -502,6 +502,8 @@ main {
 .nutr-calc-val strong { color: var(--text-primary); }
 .nutr-calc-note { font-size: 11px; color: var(--text-tertiary); font-style: italic; padding: 6px 0 2px; line-height: 1.5; }
 .nutr-calc-sources { font-size: 10px; color: var(--text-quaternary); margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04); line-height: 1.6; }
+.nutr-section-header { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-quaternary); margin: 14px 0 8px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.nutr-section-header:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
 .nutr-goals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
 .nutr-field { display: flex; flex-direction: column; gap: 5px; }
 .nutr-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
@@ -623,7 +625,36 @@ main {
         <div class="nutr-calc-sources">Sources: Mifflin-St Jeor (1990); Katch-McArdle (1996); Protein targets per Helms et al. 2.0–2.4 g/kg LBM for natural athletes; Calorie deficit/surplus per ISSN position stand.</div>
       </div>
 
+      <!-- Profile (required for TDEE calculation) -->
+      <div class="nutr-section-header">Your Profile</div>
+      <div class="nutr-goals-grid" style="margin-bottom:10px">
+        <div class="nutr-field">
+          <label class="nutr-lbl" for="nutrProfileWeight">Weight (kg)</label>
+          <input class="nutr-input" id="nutrProfileWeight" type="number" placeholder="75" step="0.1">
+        </div>
+        <div class="nutr-field">
+          <label class="nutr-lbl" for="nutrProfileHeight">Height (cm)</label>
+          <input class="nutr-input" id="nutrProfileHeight" type="number" placeholder="175" step="1">
+        </div>
+        <div class="nutr-field">
+          <label class="nutr-lbl" for="nutrProfileAge">Age</label>
+          <input class="nutr-input" id="nutrProfileAge" type="number" placeholder="25" step="1" min="10" max="120">
+        </div>
+        <div class="nutr-field">
+          <label class="nutr-lbl" for="nutrProfileSex">Sex</label>
+          <select class="nutr-input" id="nutrProfileSex">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="nutr-field" style="grid-column:1/-1">
+          <label class="nutr-lbl" for="nutrProfileActivity">Activity (hrs/week of exercise)</label>
+          <input class="nutr-input" id="nutrProfileActivity" type="number" placeholder="5" step="0.5" min="0" max="40">
+        </div>
+      </div>
+
       <!-- Goal settings -->
+      <div class="nutr-section-header">Goals</div>
       <div class="nutr-goals-grid">
         <div class="nutr-field">
           <label class="nutr-lbl" for="nutrGoalWeightIn">Goal weight (kg)</label>
@@ -1268,6 +1299,36 @@ main {
     catch { return {}; }
   }
 
+  function saveProfile() {
+    let state = null;
+    try { state = JSON.parse(localStorage.getItem('po_water_v1')); } catch {}
+    if (!state || typeof state !== 'object') {
+      state = { unit: 'bottle', bottleMl: 500, glassMl: 250, weightUnit: 'kg', profile: {}, logs: {} };
+    }
+    state.profile = state.profile || {};
+    const w = parseFloat(document.getElementById('nutrProfileWeight').value);
+    const h = parseFloat(document.getElementById('nutrProfileHeight').value);
+    const a = parseInt(document.getElementById('nutrProfileAge').value);
+    const s = document.getElementById('nutrProfileSex').value;
+    const act = parseFloat(document.getElementById('nutrProfileActivity').value);
+    if (w > 0) state.profile.weightKg = w;
+    if (h > 0) state.profile.heightCm = h;
+    if (a > 0) state.profile.age = a;
+    if (s) state.profile.sex = s;
+    if (!isNaN(act) && act >= 0) state.profile.activityHrsPerWeek = act;
+    localStorage.setItem('po_water_v1', JSON.stringify(state));
+    renderAll();
+  }
+
+  function loadProfileIntoFields() {
+    const p = getProfile();
+    if (p.weightKg) document.getElementById('nutrProfileWeight').value = p.weightKg;
+    if (p.heightCm) document.getElementById('nutrProfileHeight').value = p.heightCm;
+    if (p.age)      document.getElementById('nutrProfileAge').value    = p.age;
+    if (p.sex)      document.getElementById('nutrProfileSex').value    = p.sex;
+    if (p.activityHrsPerWeek != null) document.getElementById('nutrProfileActivity').value = p.activityHrsPerWeek;
+  }
+
   // ── BMR / TDEE ─────────────────────────────────────────────────────────────────
   // Katch-McArdle when BF% known (LBM-based, most accurate for varied body compositions)
   // Mifflin-St Jeor as fallback (best validated general formula, ±10% error)
@@ -1349,7 +1410,7 @@ main {
 
     if (!kg || !cm || !age) {
       badge.textContent = 'Profile incomplete'; badge.className = 'nutr-calc-badge warn';
-      steps.innerHTML = '<p class="nutr-calc-note">Open ⚙ Settings and fill in height, weight, and age to enable TDEE calculations.</p>';
+      steps.innerHTML = '<p class="nutr-calc-note">Fill in your weight, height, and age in the Your Profile section above to enable TDEE calculations.</p>';
       return;
     }
 
@@ -1489,6 +1550,10 @@ main {
 
   // ── Boot ───────────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
+    loadProfileIntoFields();
+    ['nutrProfileWeight','nutrProfileHeight','nutrProfileAge','nutrProfileSex','nutrProfileActivity'].forEach(id => {
+      document.getElementById(id).addEventListener('change', saveProfile);
+    });
     ['nutrGoalWeightIn','nutrGoalBf','nutrPhase','nutrCurrentBf'].forEach(id => {
       document.getElementById(id).addEventListener('change', saveGoals);
     });

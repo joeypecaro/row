@@ -116,6 +116,7 @@ body::after {
   border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent;
   color: var(--text-tertiary); font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 .chart-btn.active { background: rgba(201,163,107,0.15); border-color: rgba(201,163,107,0.4); color: var(--accent); }
 .chart-wrap { position: relative; border-radius: 10px; overflow: hidden; cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
@@ -170,15 +171,25 @@ body::after {
 .drink-search:focus { border-color: rgba(255,255,255,0.22); }
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
 .type-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-.type-tab { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent; color: var(--text-tertiary); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.type-tab { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; background: transparent; color: var(--text-tertiary); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .type-tab.active { background: rgba(201,163,107,0.12); border-color: rgba(201,163,107,0.35); color: var(--accent); }
 .drink-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 7px;
   max-height: 300px; overflow-y: auto; padding-right: 4px; margin-bottom: 14px;
+  cursor: pointer;
 }
+.caf-toast {
+  position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%) translateY(10px);
+  background: rgba(201,163,107,0.95); color: #0a0a0b;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; z-index: 100; white-space: nowrap;
+}
+.caf-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .drink-grid::-webkit-scrollbar { width: 4px; }
 .drink-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-.drink-item { display: flex; flex-direction: column; padding: 10px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.10s; -webkit-tap-highlight-color: transparent; }
+.drink-item { display: flex; flex-direction: column; padding: 10px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.10s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .drink-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(201,163,107,0.3); }
 .drink-item:active { transform: scale(0.97); }
 .drink-emoji { font-size: 20px; margin-bottom: 4px; }
@@ -192,7 +203,7 @@ body::after {
 .cust-name { flex: 2; min-width: 100px; }
 .cust-mg { width: 75px; font-family: var(--font-mono); }
 .cust-type { width: 130px; cursor: pointer; }
-.gm-add { padding: 9px 18px; border: 0; border-radius: 10px; background: linear-gradient(180deg,#FFFFFF 0%,#E8E5DD 100%); color: #0A0A0B; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),0 2px 8px rgba(0,0,0,0.35); transition: transform 0.1s, filter 0.15s; }
+.gm-add { padding: 9px 18px; border: 0; border-radius: 10px; background: linear-gradient(180deg,#FFFFFF 0%,#E8E5DD 100%); color: #0A0A0B; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),0 2px 8px rgba(0,0,0,0.35); transition: transform 0.1s, filter 0.15s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
 /* Log entries */
@@ -253,9 +264,9 @@ body::after {
       </div>
 
       <div class="chart-toggle">
-        <button class="chart-btn active" data-mode="line">LINE</button>
-        <button class="chart-btn" data-mode="bars">BARS</button>
-        <button class="chart-btn" data-mode="stack">STACK</button>
+        <button class="chart-btn active" data-mode="line" type="button">LINE</button>
+        <button class="chart-btn" data-mode="bars" type="button">BARS</button>
+        <button class="chart-btn" data-mode="stack" type="button">STACK</button>
       </div>
       <div class="chart-wrap" id="chartWrap">
         <svg id="energySvg" viewBox="0 0 800 160" preserveAspectRatio="none">
@@ -321,9 +332,9 @@ body::after {
         <input class="drink-search" id="drinkSearch" placeholder="Search caffeine, adderall…" autocomplete="off">
       </div>
       <div class="type-tabs">
-        <button class="type-tab active" data-filter="all">All</button>
-        <button class="type-tab" data-filter="caffeine">☕ Caffeine</button>
-        <button class="type-tab" data-filter="adderall">💊 Adderall</button>
+        <button class="type-tab active" data-filter="all" type="button">All</button>
+        <button class="type-tab" data-filter="caffeine" type="button">☕ Caffeine</button>
+        <button class="type-tab" data-filter="adderall" type="button">💊 Adderall</button>
       </div>
       <div class="drink-grid" id="drinkGrid"></div>
       <div class="custom-form">
@@ -335,7 +346,7 @@ body::after {
           <option value="adderall_ir">Adderall IR</option>
           <option value="adderall_xr">Adderall XR</option>
         </select>
-        <button class="gm-add" id="custAdd">Log</button>
+        <button class="gm-add" id="custAdd" type="button">Log</button>
       </div>
     </div>
   </div>
@@ -347,6 +358,7 @@ body::after {
   </div>
 
 </div><!-- /.page -->
+<div class="caf-toast" id="cafToast"></div>
 <script>
 (function () {
 'use strict';
@@ -798,13 +810,24 @@ function renderLogList() {
   }).join('');
 }
 
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('cafToast');
+  if (!el) return;
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
 // ── Log a drink ───────────────────────────────────────────────────────────────
 function logDrink(d) {
   const logs = loadLogs();
   logs.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,8), date:TODAY, time:new Date().toISOString(), name:d.name, mg:d.mg, type:d.type||'caffeine', emoji:d.emoji||'☕' });
   saveLs('caf:logs', logs);
-  _ptsHash=''; // invalidate cache
+  _ptsHash='';
   rerender();
+  showToast((d.emoji||'☕') + ' ' + d.name + ' logged — ' + d.mg + ' mg');
 }
 
 // ── Master render ─────────────────────────────────────────────────────────────

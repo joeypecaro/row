@@ -154,7 +154,7 @@ body.topbar-modal-open { overflow: hidden; touch-action: none; }
     <button class="topbar-water-add" id="topbarWaterAdd" aria-label="Log one drink" type="button">+</button>
   </div>
   <a href="settings.html" class="topbar-icon-btn" id="topbarSettings" aria-label="Settings">⚙️</a>
-  <a href="home.html" class="topbar-icon-btn" id="topbarHome" aria-label="Home">🏠</a>
+  <a href="main.html" class="topbar-icon-btn" id="topbarHome" aria-label="Home">🏠</a>
 </header>`;
 
   const bottombarHtml = `

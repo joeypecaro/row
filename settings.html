@@ -222,6 +222,70 @@ body::after {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 ::selection { background: rgba(26,115,232,0.25); color: var(--text-primary); }
+
+/* ── Display Settings ── */
+.ds-row {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border-soft);
+}
+.ds-row:first-child { border-top: none; }
+.ds-row-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 10px;
+}
+.ds-toggle { display: flex; flex-wrap: wrap; gap: 6px; }
+.ds-toggle-btn {
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: transparent; color: var(--text-tertiary);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.ds-toggle-btn.active {
+  background: rgba(201,163,107,0.12); border-color: rgba(201,163,107,0.35); color: #C9A36B;
+}
+.ds-swatch-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.ds-swatch {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+  touch-action: manipulation;
+}
+.ds-swatch.active { border-color: #FAFAFA; transform: scale(1.18); }
+.ds-check-list { display: flex; flex-direction: column; gap: 10px; }
+.ds-check-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--text-secondary); cursor: pointer;
+}
+.ds-check-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #C9A36B; flex-shrink: 0; }
+.ds-order-list { display: flex; flex-direction: column; gap: 6px; }
+.ds-order-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 13px; color: var(--text-secondary);
+}
+.ds-order-item span { flex: 1; }
+.ds-order-btn {
+  padding: 4px 9px; border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text-tertiary);
+  font: inherit; font-size: 13px; cursor: pointer; transition: all 0.15s;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.ds-order-btn:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+.ds-select {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+  background: rgba(0,0,0,0.3); color: var(--text-primary);
+  font: inherit; font-size: 13px; outline: none; cursor: pointer;
+  transition: border-color 0.2s;
+}
+.ds-select:focus { border-color: rgba(255,255,255,0.22); }
+.btn-reset {
+  padding: 10px 20px; border-radius: 10px;
+  border: 1px solid rgba(255,107,107,0.25);
+  background: rgba(255,107,107,0.05);
+  color: #FF6B6B; font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; touch-action: manipulation;
+}
+.btn-reset:hover { background: rgba(255,107,107,0.10); border-color: rgba(255,107,107,0.45); }
 </style>
 </head>
 <body>
@@ -329,6 +393,122 @@ body::after {
       </div>
       <span class="service-arrow">›</span>
     </a>
+  </div>
+
+  <!-- ── Display Settings ── -->
+  <div class="settings-label" style="margin-top:4px">Display Settings</div>
+  <div class="settings-card">
+
+    <!-- Theme -->
+    <div class="ds-row">
+      <div class="ds-row-label">Theme</div>
+      <div class="ds-toggle">
+        <button class="ds-toggle-btn" data-key="theme" data-val="dark" type="button">Dark</button>
+        <button class="ds-toggle-btn" data-key="theme" data-val="light" type="button">Light</button>
+        <button class="ds-toggle-btn" data-key="theme" data-val="system" type="button">System</button>
+      </div>
+    </div>
+
+    <!-- Accent color -->
+    <div class="ds-row">
+      <div class="ds-row-label">Accent Color</div>
+      <div class="ds-swatch-row">
+        <div class="ds-swatch" data-color="#C9A36B" style="background:#C9A36B" title="Gold"></div>
+        <div class="ds-swatch" data-color="#1A73E8" style="background:#1A73E8" title="Blue"></div>
+        <div class="ds-swatch" data-color="#6BE3A4" style="background:#6BE3A4" title="Mint"></div>
+        <div class="ds-swatch" data-color="#A78BFA" style="background:#A78BFA" title="Violet"></div>
+        <div class="ds-swatch" data-color="#F2C063" style="background:#F2C063" title="Amber"></div>
+        <div class="ds-swatch" data-color="#FF6B6B" style="background:#FF6B6B" title="Coral"></div>
+      </div>
+    </div>
+
+    <!-- Font size -->
+    <div class="ds-row">
+      <div class="ds-row-label">Font Size</div>
+      <div class="ds-toggle">
+        <button class="ds-toggle-btn" data-key="fontSize" data-val="small" type="button">Small</button>
+        <button class="ds-toggle-btn" data-key="fontSize" data-val="medium" type="button">Medium</button>
+        <button class="ds-toggle-btn" data-key="fontSize" data-val="large" type="button">Large</button>
+      </div>
+    </div>
+
+    <!-- UI Density -->
+    <div class="ds-row">
+      <div class="ds-row-label">UI Density</div>
+      <div class="ds-toggle">
+        <button class="ds-toggle-btn" data-key="density" data-val="compact" type="button">Compact</button>
+        <button class="ds-toggle-btn" data-key="density" data-val="comfortable" type="button">Comfortable</button>
+      </div>
+    </div>
+
+    <!-- Widget visibility -->
+    <div class="ds-row">
+      <div class="ds-row-label">Widget Visibility</div>
+      <div class="ds-check-list" id="dsWidgets">
+        <label class="ds-check-item"><input type="checkbox" data-widget="goals"> Goals &amp; Daily Ring</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="health"> Health &amp; Nutrition</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="fitness"> Fitness &amp; Gym</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="calendar"> Calendar</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="email"> Email</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="stimulants"> Stimulants</label>
+        <label class="ds-check-item"><input type="checkbox" data-widget="finance"> Finance</label>
+      </div>
+    </div>
+
+    <!-- Card order -->
+    <div class="ds-row">
+      <div class="ds-row-label">Card Order</div>
+      <div class="ds-order-list" id="dsCardOrder"></div>
+    </div>
+
+    <!-- Date format -->
+    <div class="ds-row">
+      <div class="ds-row-label">Date Format</div>
+      <div class="ds-toggle">
+        <button class="ds-toggle-btn" data-key="dateFormat" data-val="mm/dd/yyyy" type="button">MM/DD/YYYY</button>
+        <button class="ds-toggle-btn" data-key="dateFormat" data-val="dd/mm/yyyy" type="button">DD/MM/YYYY</button>
+        <button class="ds-toggle-btn" data-key="dateFormat" data-val="relative" type="button">Relative</button>
+      </div>
+    </div>
+
+    <!-- Time format -->
+    <div class="ds-row">
+      <div class="ds-row-label">Time Format</div>
+      <div class="ds-toggle">
+        <button class="ds-toggle-btn" data-key="timeFormat" data-val="12h" type="button">12h</button>
+        <button class="ds-toggle-btn" data-key="timeFormat" data-val="24h" type="button">24h</button>
+      </div>
+    </div>
+
+    <!-- Timezone -->
+    <div class="ds-row">
+      <div class="ds-row-label">Timezone</div>
+      <select class="ds-select" id="dsTimezone">
+        <option value="">Auto (browser default)</option>
+        <option value="America/New_York">America / New York</option>
+        <option value="America/Chicago">America / Chicago</option>
+        <option value="America/Denver">America / Denver</option>
+        <option value="America/Los_Angeles">America / Los Angeles</option>
+        <option value="America/Phoenix">America / Phoenix</option>
+        <option value="America/Anchorage">America / Anchorage</option>
+        <option value="Pacific/Honolulu">Pacific / Honolulu</option>
+        <option value="Europe/London">Europe / London</option>
+        <option value="Europe/Paris">Europe / Paris</option>
+        <option value="Europe/Berlin">Europe / Berlin</option>
+        <option value="Europe/Moscow">Europe / Moscow</option>
+        <option value="Asia/Dubai">Asia / Dubai</option>
+        <option value="Asia/Kolkata">Asia / Kolkata</option>
+        <option value="Asia/Shanghai">Asia / Shanghai</option>
+        <option value="Asia/Tokyo">Asia / Tokyo</option>
+        <option value="Australia/Sydney">Australia / Sydney</option>
+      </select>
+    </div>
+
+    <!-- Reset -->
+    <div class="ds-row" style="display:flex;justify-content:flex-end">
+      <button class="btn-reset" id="dsReset" type="button">Reset to Defaults</button>
+    </div>
+
   </div>
 
 </div>
@@ -454,6 +634,112 @@ body::after {
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
+  // ── Display Settings ────────────────────────────────────────────────────────
+  const DS_KEY = 'display_settings';
+  const DS_DEFAULTS = {
+    theme: 'dark', accent: '#C9A36B', fontSize: 'medium', density: 'comfortable',
+    widgets: { goals: true, health: true, fitness: true, calendar: true, email: true, stimulants: true, finance: true },
+    cardOrder: ['Goals', 'Health', 'Fitness', 'Calendar', 'Email', 'Stimulants', 'Finance'],
+    dateFormat: 'mm/dd/yyyy', timeFormat: '12h', timezone: ''
+  };
+
+  function getDS() {
+    try { return Object.assign({}, DS_DEFAULTS, JSON.parse(localStorage.getItem(DS_KEY)) || {}); }
+    catch { return Object.assign({}, DS_DEFAULTS); }
+  }
+  function saveDS(s) { localStorage.setItem(DS_KEY, JSON.stringify(s)); }
+
+  function initDisplaySettings() {
+    let s = getDS();
+
+    // Toggle button groups
+    ['theme', 'fontSize', 'density', 'dateFormat', 'timeFormat'].forEach(key => {
+      document.querySelectorAll(`[data-key="${key}"]`).forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.val === s[key]);
+        btn.addEventListener('click', () => {
+          s[key] = btn.dataset.val;
+          document.querySelectorAll(`[data-key="${key}"]`).forEach(b => b.classList.toggle('active', b === btn));
+          saveDS(s);
+          showToast('Settings saved');
+        });
+      });
+    });
+
+    // Accent swatches
+    document.querySelectorAll('.ds-swatch').forEach(sw => {
+      sw.classList.toggle('active', sw.dataset.color === s.accent);
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('.ds-swatch').forEach(x => x.classList.remove('active'));
+        sw.classList.add('active');
+        s.accent = sw.dataset.color;
+        saveDS(s);
+        showToast('Accent color updated');
+      });
+    });
+
+    // Widget checkboxes
+    const widgets = s.widgets || DS_DEFAULTS.widgets;
+    document.querySelectorAll('[data-widget]').forEach(cb => {
+      const key = cb.dataset.widget;
+      cb.checked = widgets[key] !== false;
+      cb.addEventListener('change', () => {
+        s.widgets = s.widgets || {};
+        s.widgets[key] = cb.checked;
+        saveDS(s);
+      });
+    });
+
+    // Card order
+    const order = (s.cardOrder && s.cardOrder.length) ? s.cardOrder : [...DS_DEFAULTS.cardOrder];
+    const orderList = document.getElementById('dsCardOrder');
+    function renderOrder(arr) {
+      if (!orderList) return;
+      orderList.innerHTML = arr.map((name, i) => `
+        <div class="ds-order-item" data-idx="${i}">
+          <span>${name}</span>
+          <button class="ds-order-btn" data-dir="up" type="button">↑</button>
+          <button class="ds-order-btn" data-dir="down" type="button">↓</button>
+        </div>`).join('');
+      orderList.querySelectorAll('.ds-order-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.closest('.ds-order-item').dataset.idx);
+          const dir = btn.dataset.dir;
+          if (dir === 'up' && idx > 0) [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+          else if (dir === 'down' && idx < arr.length - 1) [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+          else return;
+          s.cardOrder = [...arr];
+          saveDS(s);
+          renderOrder(arr);
+        });
+      });
+    }
+    renderOrder(order);
+
+    // Timezone
+    const tzSel = document.getElementById('dsTimezone');
+    if (tzSel) {
+      tzSel.value = s.timezone || '';
+      tzSel.addEventListener('change', () => { s.timezone = tzSel.value; saveDS(s); });
+    }
+
+    // Reset
+    const resetBtn = document.getElementById('dsReset');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+      if (confirm('Reset all display settings to defaults?')) {
+        localStorage.removeItem(DS_KEY);
+        s = Object.assign({}, DS_DEFAULTS);
+        ['theme', 'fontSize', 'density', 'dateFormat', 'timeFormat'].forEach(key => {
+          document.querySelectorAll(`[data-key="${key}"]`).forEach(b => b.classList.toggle('active', b.dataset.val === s[key]));
+        });
+        document.querySelectorAll('.ds-swatch').forEach(sw => sw.classList.toggle('active', sw.dataset.color === s.accent));
+        document.querySelectorAll('[data-widget]').forEach(cb => { cb.checked = (s.widgets[cb.dataset.widget] !== false); });
+        renderOrder([...DS_DEFAULTS.cardOrder]);
+        if (tzSel) tzSel.value = '';
+        showToast('Settings reset to defaults');
+      }
+    });
+  }
+
   async function init() {
     const wasCallback = await handleCallback();
     let tok = getToken();
@@ -474,6 +760,8 @@ body::after {
         disconnect();
       }
     });
+
+    initDisplaySettings();
   }
 
   if (document.readyState === 'loading') {
