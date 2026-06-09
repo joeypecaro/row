@@ -618,6 +618,33 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   outline: none;
   max-width: 120px;
 }
+.st-brok-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.st-brok-name  { color: var(--text-primary); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-brok-total { font-family: var(--font-mono); font-size: 12px; color: var(--success); font-weight: 600; white-space: nowrap; }
+.st-brok-del   { background: none; border: none; color: var(--text-quaternary); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.st-brok-del:hover { color: var(--danger); }
+.st-acct-sel {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.10);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  cursor: pointer;
+  outline: none;
+  max-width: 140px;
+  margin-top: 4px;
+}
 
 .nw-subcard {
   background: rgba(255,255,255,0.025) !important;
@@ -2151,6 +2178,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <span class="section-title-text">STOCKS</span>
   </div>
   <div class="card" style="background:linear-gradient(135deg,rgba(107,227,164,0.05),rgba(100,160,255,0.03));border:1px solid rgba(107,227,164,0.12)">
+
     <!-- summary hero -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:8px">
       <div>
@@ -2161,11 +2189,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button id="stRefreshBtn" class="quick-add-btn" onclick="window.__stRefresh()" style="border-radius:999px;font-size:12px;padding:6px 14px">↻ Refresh</button>
-        <button id="stSyncBtn"   class="quick-add-btn" onclick="window.__stSyncNw()"  style="border-radius:999px;font-size:12px;padding:6px 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.09);color:var(--text-secondary)">⇅ Sync NW</button>
       </div>
     </div>
-    <div id="stUpdated" style="font-size:11px;color:var(--text-quaternary);margin-bottom:12px"></div>
-    <div id="stError"   style="display:none;padding:8px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.20);border-radius:8px;font-size:11px;color:var(--danger);margin-bottom:10px;line-height:1.5"></div>
+    <div id="stUpdated" style="font-size:11px;color:var(--text-quaternary);margin-bottom:14px"></div>
+    <div id="stError" style="display:none;padding:8px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.20);border-radius:8px;font-size:11px;color:var(--danger);margin-bottom:10px;line-height:1.5"></div>
+
+    <!-- brokerage accounts -->
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary)">Brokerage Accounts</span>
+        <span style="font-size:10px;color:var(--text-quaternary)">auto-synced to Net Worth</span>
+      </div>
+      <div id="stBrokList"></div>
+      <div class="quick-add" style="gap:6px;margin-top:6px;border-top:none;padding-top:0">
+        <input type="text" id="stBrokName" placeholder="Add account (e.g. Fidelity, Schwab)" style="flex:1" />
+        <button class="quick-add-btn" onclick="window.__stAddBrokerage()">+ Add</button>
+      </div>
+    </div>
 
     <!-- holdings list -->
     <div style="margin-bottom:12px">
@@ -2179,19 +2219,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
     <!-- add form -->
     <div class="quick-add" style="flex-wrap:wrap;gap:6px">
-      <input type="text"   id="stTicker"  placeholder="Ticker (e.g. AAPL)" maxlength="12" autocapitalize="characters"
+      <input type="text"   id="stTicker" placeholder="Ticker (e.g. AAPL)" maxlength="12" autocapitalize="characters"
              style="flex:0 0 110px;font-family:var(--font-mono);text-transform:uppercase;font-weight:600;letter-spacing:0.03em" />
-      <input type="number" id="stShares"  placeholder="Shares" step="0.0001" min="0" style="flex:0 0 90px" />
-      <input type="number" id="stCost"    placeholder="Cost/sh USD (opt)" step="0.01" min="0" style="flex:1;min-width:110px" />
+      <input type="number" id="stShares" placeholder="Shares" step="0.0001" min="0" style="flex:0 0 90px" />
+      <input type="number" id="stCost"   placeholder="Cost/sh USD (opt)" step="0.01" min="0" style="flex:1;min-width:100px" />
       <select id="stAccount" style="flex:1;min-width:120px;padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)">
-        <option value="">No NW link</option>
+        <option value="">No account</option>
       </select>
       <button class="quick-add-btn" onclick="window.__stAdd()">+ Add</button>
     </div>
     <div id="stFeedback" style="font-size:12px;min-height:16px;margin-top:7px"></div>
     <div style="font-size:11px;color:var(--text-quaternary);margin-top:4px;line-height:1.5">
       Requires <code style="font-size:10px;background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px">FINNHUB_API_KEY</code>
-      in Vercel environment variables. NW link syncs market value into your Stocks / Investments accounts.
+      in Vercel env vars. Each holding's value is summed by brokerage account and shown in Net Worth automatically.
     </div>
   </div>
 </div>
@@ -3762,17 +3802,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   const ST_HOLD_KEY  = 'stocks:holdings';
   const ST_PRICE_KEY = 'stocks:prices';
   const ST_TS_KEY    = 'stocks:last_refresh';
+  const ST_BROK_KEY  = 'stocks:brokerages';
   const ST_STALE_MS  = 5 * 60 * 1000;
 
   let _stPrices = {};
   let _stBusy   = false;
 
-  function stGetHoldings()    { return storeGet(ST_HOLD_KEY)  || []; }
-  function stSaveHoldings(h)  { storeSet(ST_HOLD_KEY, h); }
+  function stGetHoldings()      { return storeGet(ST_HOLD_KEY)  || []; }
+  function stSaveHoldings(h)    { storeSet(ST_HOLD_KEY, h); }
+  function stGetBrokerages()    { return storeGet(ST_BROK_KEY)  || []; }
+  function stSaveBrokerages(b)  { storeSet(ST_BROK_KEY, b); }
 
   function stUsdToChf(usd)    { return (Number(usd) || 0) / (exchangeRates.USD || 1); }
   function stFmtUsd(usd)      { return fmtMoney(stUsdToChf(usd)); }
-
   function stSign(n)          { return n >= 0 ? '+' : ''; }
 
   function stFmtShares(n) {
@@ -3780,19 +3822,128 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     return v % 1 === 0 ? String(v) : v.toFixed(4).replace(/\.?0+$/, '');
   }
 
-  function stGetNwItems()     { return storeGet('nw:stocks') || []; }
-
   function stPopulateAcctSel() {
-    const sel = document.getElementById('stAccount');
-    if (!sel) return;
-    const items = stGetNwItems();
-    sel.innerHTML = '<option value="">No NW link</option>';
-    items.forEach(it => {
-      const o = document.createElement('option');
-      o.value = it.name; o.textContent = '📈 ' + it.name;
-      sel.appendChild(o);
+    const brokerages = stGetBrokerages();
+    [document.getElementById('stAccount'), document.getElementById('stAcctAddSel')].forEach(sel => {
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— no account —</option>';
+      brokerages.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+      });
+      if (prev && brokerages.includes(prev)) sel.value = prev;
     });
   }
+
+  // Rebuild every per-card account select that's currently in the DOM
+  function stRefreshCardSelects() {
+    const brokerages = stGetBrokerages();
+    document.querySelectorAll('.st-acct-sel').forEach(sel => {
+      const current = sel.dataset.current || '';
+      sel.innerHTML = '<option value="">— no account —</option>';
+      brokerages.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        o.selected = name === current;
+        sel.appendChild(o);
+      });
+      if (current && brokerages.includes(current)) sel.value = current;
+    });
+  }
+
+  // Auto-sync brokerage totals into nw:stocks
+  function stAutoSyncNw() {
+    const brokerages = stGetBrokerages();
+    if (!brokerages.length) return;
+    const holdings = stGetHoldings();
+    const totals = {};
+    brokerages.forEach(name => { totals[name] = 0; });
+    holdings.forEach(h => {
+      if (!h.nwAccount || !totals.hasOwnProperty(h.nwAccount)) return;
+      const q = _stPrices[h.ticker];
+      if (q && q.c > 0) totals[h.nwAccount] += stUsdToChf(q.c) * h.shares;
+    });
+    const items = storeGet('nw:stocks') || [];
+    let changed = false;
+    Object.entries(totals).forEach(([name, chf]) => {
+      const existing = items.find(it => it.name === name);
+      if (existing) {
+        if (Math.abs((existing.amount || 0) - chf) > 0.001) { existing.amount = chf; changed = true; }
+      } else {
+        items.push({ name, amount: chf }); changed = true;
+      }
+    });
+    if (changed) { storeSet('nw:stocks', items); renderAllNetWorth(); }
+  }
+
+  // Render the brokerage account list with per-account totals
+  function stRenderBrokerages() {
+    const listEl = document.getElementById('stBrokList');
+    if (!listEl) return;
+    const brokerages = stGetBrokerages();
+    const holdings   = stGetHoldings();
+    listEl.innerHTML = '';
+    if (!brokerages.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:12px;color:var(--text-quaternary);padding:4px 2px;font-style:italic;';
+      empty.textContent = 'No accounts yet — add one above, then assign holdings below';
+      listEl.appendChild(empty);
+      return;
+    }
+    brokerages.forEach((name, i) => {
+      let total = 0;
+      holdings.forEach(h => {
+        if (h.nwAccount !== name) return;
+        const q = _stPrices[h.ticker];
+        if (q && q.c > 0) total += stUsdToChf(q.c) * h.shares;
+      });
+      const row = document.createElement('div');
+      row.className = 'st-brok-row';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'st-brok-name';
+      nameEl.textContent = name;
+      const totEl = document.createElement('span');
+      totEl.className = 'st-brok-total';
+      totEl.textContent = total > 0 ? fmtMoney(total) : '—';
+      const del = document.createElement('button');
+      del.className = 'st-brok-del';
+      del.textContent = '×';
+      del.title = 'Remove account';
+      del.addEventListener('click', () => {
+        if (!confirm('Remove "' + name + '"? Holdings linked to it will be unassigned.')) return;
+        const updated = stGetBrokerages().filter((_, j) => j !== i);
+        stSaveBrokerages(updated);
+        // Unlink any holdings using this brokerage
+        const h2 = stGetHoldings().map(h => h.nwAccount === name ? { ...h, nwAccount: '' } : h);
+        stSaveHoldings(h2);
+        stRenderBrokerages();
+        stPopulateAcctSel();
+        stRenderHoldings();
+      });
+      row.appendChild(nameEl);
+      row.appendChild(totEl);
+      row.appendChild(del);
+      listEl.appendChild(row);
+    });
+  }
+
+  window.__stAddBrokerage = function() {
+    const input = document.getElementById('stBrokName');
+    const name  = (input ? input.value : '').trim();
+    if (!name) return;
+    const existing = stGetBrokerages();
+    if (existing.some(b => b.toLowerCase() === name.toLowerCase())) {
+      if (input) input.value = '';
+      return;
+    }
+    stSaveBrokerages([...existing, name]);
+    if (input) input.value = '';
+    stRenderBrokerages();
+    stPopulateAcctSel();
+    stRefreshCardSelects();
+  };
 
   function stSetFeedback(msg, color) {
     const el = document.getElementById('stFeedback');
@@ -3965,12 +4116,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         mid.appendChild(costPrompt);
       }
 
-      if (h.nwAccount) {
-        const linkEl = document.createElement('div');
-        linkEl.style.cssText = 'font-size:10px;color:var(--text-quaternary);margin-top:3px;';
-        linkEl.textContent = '⇅ ' + h.nwAccount;
-        mid.appendChild(linkEl);
-      }
+      // Per-card account dropdown
+      const acctSel = document.createElement('select');
+      acctSel.className = 'st-acct-sel';
+      acctSel.dataset.current = h.nwAccount || '';
+      acctSel.title = 'Assign to brokerage account';
+      const noneOpt = document.createElement('option');
+      noneOpt.value = ''; noneOpt.textContent = '— no account —';
+      acctSel.appendChild(noneOpt);
+      stGetBrokerages().forEach(bname => {
+        const o = document.createElement('option');
+        o.value = bname; o.textContent = bname;
+        o.selected = h.nwAccount === bname;
+        acctSel.appendChild(o);
+      });
+      acctSel.addEventListener('change', () => {
+        const updated = stGetHoldings();
+        updated[idx].nwAccount = acctSel.value;
+        acctSel.dataset.current = acctSel.value;
+        stSaveHoldings(updated);
+        stAutoSyncNw();
+        stRenderBrokerages();
+      });
+      mid.appendChild(acctSel);
 
       // Right column
       const right = document.createElement('div');
@@ -4003,6 +4171,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     });
 
     stRenderSummary(holdings);
+    stAutoSyncNw();
+    stRenderBrokerages();
   }
 
   function stBeginEdit(field, el, holdings, idx) {
@@ -4074,27 +4244,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
   };
 
-  window.__stSyncNw = function() {
-    const holdings = stGetHoldings().filter(h => h.nwAccount && _stPrices[h.ticker] && _stPrices[h.ticker].c > 0);
-    if (!holdings.length) {
-      const btn = document.getElementById('stSyncBtn');
-      if (btn) { const orig = btn.textContent; btn.textContent = '⇅ No links set'; setTimeout(() => btn.textContent = orig, 2000); }
-      return;
-    }
-    const totals = {};
-    holdings.forEach(h => {
-      totals[h.nwAccount] = (totals[h.nwAccount] || 0) + stUsdToChf(_stPrices[h.ticker].c) * h.shares;
-    });
-    const items = stGetNwItems();
-    let n = 0;
-    Object.entries(totals).forEach(([name, chf]) => {
-      const item = items.find(it => it.name === name);
-      if (item) { item.amount = chf; n++; }
-    });
-    if (n) { storeSet('nw:stocks', items); renderAllNetWorth(); }
-    const btn = document.getElementById('stSyncBtn');
-    if (btn) { const orig = btn.textContent; btn.textContent = '✓ Synced ' + n; setTimeout(() => btn.textContent = orig, 2500); }
-  };
+  // Sync is now automatic — stAutoSyncNw() is called after every render/refresh.
 
   window.__stAdd = async function() {
     const ticker  = (document.getElementById('stTicker').value  || '').trim().toUpperCase();
@@ -4133,18 +4283,19 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   (function stBoot() {
     _stPrices = storeGet(ST_PRICE_KEY) || {};
+    stRenderBrokerages();
     stPopulateAcctSel();
     stRenderHoldings();
     stUpdateLabel();
     setInterval(stUpdateLabel, 30000);
-    // Auto-refresh if stale and prices exist in cache already (user has holdings)
     const lastTs = storeGet(ST_TS_KEY);
     if (stGetHoldings().length && (!lastTs || Date.now() - lastTs > ST_STALE_MS)) {
       window.__stRefresh();
     }
-    window.addEventListener('storage', e => {
-      if (e.key === 'nw:stocks' || e.key === null) stPopulateAcctSel();
-    });
+    const brokInput = document.getElementById('stBrokName');
+    if (brokInput) {
+      brokInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.__stAddBrokerage(); } });
+    }
   })();
 
   // ============================================================
