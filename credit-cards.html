@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<title>Credit Cards</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<style>
+:root {
+  --bg:#0A0A0B; --bg-deep:#050506; --bg-card:rgba(255,255,255,0.04);
+  --text-primary:#FAFAFA; --text-secondary:#B8B6B0; --text-tertiary:#76746E; --text-quaternary:#4D4B47;
+  --accent:#E07658; --success:#6BE3A4; --warning:#F2C063; --danger:#FF6B6B;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px;
+  --font:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg-deep);color:var(--text-primary);font-family:var(--font);-webkit-font-smoothing:antialiased;min-height:100%;}
+body::before{content:'';position:fixed;inset:-10%;z-index:-2;background:radial-gradient(60% 45% at 82% 14%,rgba(255,107,107,0.12) 0%,transparent 55%),radial-gradient(55% 45% at 18% 90%,rgba(180,180,200,0.06) 0%,transparent 55%),linear-gradient(180deg,#0A0A0B 0%,#050506 100%);filter:blur(40px) saturate(1.05);pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:-1;background-image:radial-gradient(rgba(255,255,255,0.014) 1px,transparent 1px);background-size:3px 3px;opacity:0.7;pointer-events:none;}
+.shell{max-width:880px;margin:0 auto;padding:24px 16px 100px;}
+.fin-back-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px 8px 10px;margin:0 0 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:999px;color:var(--text-secondary);font-family:var(--font);font-size:12px;font-weight:600;letter-spacing:0.02em;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:background 0.15s ease,color 0.15s ease;}
+.fin-back-btn:hover{background:rgba(255,255,255,0.08);color:var(--text-primary);}
+
+/* ===== Bottom tabs ===== */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;background:rgba(10,10,11,0.92);backdrop-filter:blur(20px) saturate(1.4);border-top:1px solid rgba(255,255,255,0.06);padding:0 0 env(safe-area-inset-bottom,0);}
+.bot-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px 8px;background:none;border:none;cursor:pointer;color:var(--text-quaternary);font-family:var(--font);font-size:9px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:color 0.15s;}
+.bot-tab.active{color:var(--danger);}
+.bot-tab-icon{font-size:18px;line-height:1;}
+.section{display:none;}
+.section:not(.hidden-section){display:block;}
+.section-title{margin-bottom:14px;}
+.section-title-text{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);}
+
+/* ===== Card ===== */
+.card{background:var(--bg-card);border:1px solid rgba(255,255,255,0.06);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;}
+.label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:10px;}
+
+/* ===== Summary strip ===== */
+.cc-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.cc-stat{background:rgba(255,255,255,0.03);border-radius:var(--radius-md);padding:12px 10px;text-align:center;}
+.cc-stat-val{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:2px;}
+.cc-stat-lbl{font-size:10px;color:var(--text-quaternary);text-transform:uppercase;letter-spacing:0.06em;}
+.cc-stat-val.danger{color:var(--danger);}
+.cc-stat-val.warning{color:var(--warning);}
+.cc-stat-val.ok{color:var(--success);}
+
+/* ===== CC card row ===== */
+.cc-card-item{background:rgba(255,255,255,0.03);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;border-left:3px solid var(--c,#888);}
+.cc-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.cc-card-name{font-size:14px;font-weight:600;color:var(--text-primary);}
+.cc-card-del{background:none;border:none;color:var(--text-quaternary);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;-webkit-tap-highlight-color:transparent;}
+.cc-card-del:hover{color:var(--danger);}
+.cc-bal-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.cc-bal{font-family:var(--font-mono);font-size:18px;font-weight:700;}
+.cc-limit{font-size:11px;color:var(--text-tertiary);}
+.cc-util-bar-wrap{height:5px;background:rgba(255,255,255,0.07);border-radius:999px;margin-bottom:8px;overflow:hidden;}
+.cc-util-bar{height:100%;border-radius:999px;transition:width 0.4s ease;}
+.cc-util-bar.ok{background:var(--success);}
+.cc-util-bar.warning{background:var(--warning);}
+.cc-util-bar.danger{background:var(--danger);}
+.cc-meta-row{display:flex;gap:12px;flex-wrap:wrap;}
+.cc-meta-chip{font-size:10px;color:var(--text-tertiary);background:rgba(255,255,255,0.04);padding:2px 7px;border-radius:999px;}
+.cc-meta-chip strong{color:var(--text-secondary);}
+
+/* ===== Add card form ===== */
+.cc-add-form{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:var(--radius-md);padding:14px;margin-top:12px;}
+.cc-add-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:12px;}
+.cc-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.cc-form-grid.three{grid-template-columns:1fr 1fr 1fr;}
+.cc-form-full{grid-column:1/-1;}
+.cc-form-label{font-size:10px;color:var(--text-tertiary);margin-bottom:3px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;}
+.cc-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font);font-size:13px;padding:8px 10px;outline:none;transition:border-color 0.15s;}
+.cc-input:focus{border-color:rgba(255,107,107,0.4);}
+.cc-color-row{display:flex;gap:6px;margin-top:4px;}
+.cc-color-dot{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color 0.15s;flex-shrink:0;}
+.cc-color-dot.selected{border-color:var(--text-primary);}
+.cc-add-btn{width:100%;padding:10px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.25);border-radius:var(--radius-sm);color:var(--danger);font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:background 0.15s;}
+.cc-add-btn:hover{background:rgba(255,107,107,0.2);}
+
+/* ===== Liability tab ===== */
+.liability-total{text-align:center;padding:20px 0 16px;}
+.liability-amount{font-family:var(--font-mono);font-size:36px;font-weight:700;color:var(--danger);margin-bottom:4px;}
+.liability-sub{font-size:11px;color:var(--text-tertiary);}
+.sync-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:14px;}
+.sync-toggle-lbl{font-size:13px;color:var(--text-secondary);}
+.sync-toggle-sub{font-size:11px;color:var(--text-quaternary);margin-top:2px;}
+.toggle-switch{position:relative;width:44px;height:26px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:999px;cursor:pointer;transition:background 0.2s;}
+.toggle-slider::before{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.2s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--success);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);}
+.apr-debt-list{display:flex;flex-direction:column;gap:6px;}
+.apr-debt-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:var(--radius-sm);}
+.apr-debt-name{font-size:13px;color:var(--text-secondary);}
+.apr-debt-right{text-align:right;}
+.apr-debt-bal{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text-primary);}
+.apr-debt-apr{font-size:10px;color:var(--text-quaternary);}
+.monthly-cost{font-size:11px;color:var(--warning);margin-top:8px;text-align:center;}
+
+/* ===== Rewards tab ===== */
+.reward-card-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.03);border-left:3px solid var(--c,#888);border-radius:var(--radius-sm);margin-bottom:8px;}
+.reward-card-name{font-size:13px;font-weight:600;color:var(--text-primary);}
+.reward-card-type{font-size:10px;color:var(--text-tertiary);margin-top:2px;}
+.reward-card-earned{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--success);text-align:right;}
+.reward-card-rate{font-size:10px;color:var(--text-quaternary);text-align:right;}
+.reward-log-form{display:grid;grid-template-columns:1fr 1fr 80px auto;gap:6px;margin-top:12px;align-items:end;}
+.reward-log-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;}
+.reward-log-left{color:var(--text-secondary);}
+.reward-log-right{font-family:var(--font-mono);color:var(--success);font-weight:600;}
+.reward-log-date{font-size:10px;color:var(--text-quaternary);margin-left:8px;}
+
+/* ===== Optimizer tab ===== */
+.opt-cat-row{display:grid;grid-template-columns:120px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.opt-cat-name{font-size:13px;color:var(--text-secondary);}
+.opt-best-card{display:flex;align-items:center;gap:6px;}
+.opt-card-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.opt-card-name{font-size:12px;color:var(--text-primary);font-weight:600;}
+.opt-rate-badge{font-size:10px;color:var(--success);font-family:var(--font-mono);font-weight:700;background:rgba(107,227,164,0.1);padding:2px 6px;border-radius:999px;}
+.opt-empty{font-size:12px;color:var(--text-quaternary);font-style:italic;}
+.opt-edit-btn{font-size:11px;color:var(--text-quaternary);background:none;border:none;cursor:pointer;padding:2px 6px;-webkit-tap-highlight-color:transparent;}
+.opt-edit-btn:hover{color:var(--text-secondary);}
+.opt-rates-panel{background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);padding:10px;margin-top:8px;}
+.opt-rate-input-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.opt-rate-card-lbl{font-size:12px;color:var(--text-secondary);flex:1;}
+
+/* ===== Plaid tab ===== */
+.plaid-connect-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius-md);color:var(--text-primary);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s;-webkit-tap-highlight-color:transparent;}
+.plaid-connect-btn:hover{background:rgba(255,255,255,0.09);}
+.plaid-institution{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:var(--radius-md);margin-bottom:8px;}
+.plaid-inst-name{font-size:14px;font-weight:600;color:var(--text-primary);}
+.plaid-inst-sub{font-size:11px;color:var(--text-tertiary);margin-top:2px;}
+.plaid-inst-del{background:none;border:none;color:var(--text-quaternary);cursor:pointer;font-size:16px;-webkit-tap-highlight-color:transparent;}
+.plaid-inst-del:hover{color:var(--danger);}
+.plaid-status{font-size:11px;color:var(--text-tertiary);text-align:center;margin-top:8px;}
+.plaid-sync-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:rgba(107,227,164,0.08);border:1px solid rgba(107,227,164,0.2);border-radius:var(--radius-sm);color:var(--success);font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;margin-top:10px;transition:background 0.15s;}
+.plaid-sync-btn:hover{background:rgba(107,227,164,0.15);}
+.plaid-sandbox-note{font-size:10px;color:var(--text-quaternary);text-align:center;margin-top:6px;font-style:italic;}
+
+/* ===== Quick-add / shared inputs ===== */
+.quick-add-btn{padding:8px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-sm);color:var(--text-primary);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:background 0.15s;}
+.quick-add-btn:hover{background:rgba(255,255,255,0.1);}
+.feedback{font-size:11px;min-height:16px;margin-top:6px;padding:0 2px;}
+.feedback.ok{color:var(--success);}
+.feedback.err{color:var(--danger);}
+</style>
+</head>
+<body>
+<div id="topbar-mount"></div>
+<div class="shell">
+  <a href="finance.html" class="fin-back-btn">← Finance</a>
+
+  <!-- ===== BALANCES ===== -->
+  <div class="section" data-section="cc">
+    <div class="section-title"><span class="section-title-text">CREDIT CARDS</span></div>
+    <div class="card" style="background:linear-gradient(135deg,rgba(255,107,107,0.06),rgba(224,118,88,0.03));border:1px solid rgba(255,107,107,0.12)">
+      <div class="cc-summary">
+        <div class="cc-stat"><div class="cc-stat-val danger" id="ccTotalBal">$0</div><div class="cc-stat-lbl">Total Debt</div></div>
+        <div class="cc-stat"><div class="cc-stat-val" id="ccTotalAvail">$0</div><div class="cc-stat-lbl">Available</div></div>
+        <div class="cc-stat"><div class="cc-stat-val" id="ccUtilPct">0%</div><div class="cc-stat-lbl">Utilization</div></div>
+      </div>
+      <div id="ccCardList"></div>
+      <div id="ccEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:16px 0;display:none">No cards yet — add one below</div>
+
+      <div class="cc-add-form">
+        <div class="cc-add-title">Add Card</div>
+        <div class="cc-form-grid cc-form-full" style="display:grid;grid-template-columns:1fr;gap:6px">
+          <div>
+            <div class="cc-form-label">Card Name</div>
+            <input class="cc-input" type="text" id="ccName" placeholder="e.g. Chase Sapphire" />
+          </div>
+        </div>
+        <div class="cc-form-grid" style="margin-top:8px">
+          <div>
+            <div class="cc-form-label">Balance</div>
+            <input class="cc-input" type="number" id="ccBalance" placeholder="0.00" step="0.01" min="0" />
+          </div>
+          <div>
+            <div class="cc-form-label">Credit Limit</div>
+            <input class="cc-input" type="number" id="ccLimit" placeholder="0.00" step="0.01" min="0" />
+          </div>
+        </div>
+        <div class="cc-form-grid three" style="margin-top:8px">
+          <div>
+            <div class="cc-form-label">APR %</div>
+            <input class="cc-input" type="number" id="ccApr" placeholder="24.99" step="0.01" min="0" max="100" />
+          </div>
+          <div>
+            <div class="cc-form-label">Due Day</div>
+            <input class="cc-input" type="number" id="ccDueDay" placeholder="15" min="1" max="31" />
+          </div>
+          <div>
+            <div class="cc-form-label">Min Payment</div>
+            <input class="cc-input" type="number" id="ccMinPmt" placeholder="25" step="0.01" min="0" />
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="cc-form-label">Reward Type</div>
+          <select class="cc-input" id="ccRewardType" style="margin-top:4px">
+            <option value="none">None</option>
+            <option value="cashback">Cash Back %</option>
+            <option value="points">Points (per $1)</option>
+            <option value="miles">Miles (per $1)</option>
+          </select>
+        </div>
+        <div style="margin-top:8px">
+          <div class="cc-form-label">Base Rate (% or pts)</div>
+          <input class="cc-input" type="number" id="ccRewardBase" placeholder="1.5" step="0.01" min="0" />
+        </div>
+        <div style="margin-top:10px">
+          <div class="cc-form-label">Color</div>
+          <div class="cc-color-row" id="ccColorPicker"></div>
+        </div>
+        <button class="cc-add-btn" style="margin-top:12px" onclick="window.__ccAddCard()">+ Add Card</button>
+        <div class="feedback" id="ccFeedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NET WORTH LIABILITY ===== -->
+  <div class="section" data-section="liability" style="display:none">
+    <div class="section-title"><span class="section-title-text">NET WORTH LIABILITY</span></div>
+    <div class="card">
+      <div class="liability-total">
+        <div class="liability-amount" id="liabilityTotal">$0</div>
+        <div class="liability-sub">Total credit card debt</div>
+      </div>
+      <div class="sync-toggle-row">
+        <div>
+          <div class="sync-toggle-lbl">Sync to Net Worth</div>
+          <div class="sync-toggle-sub">Writes debt as a negative entry in Finance → Other</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="nwSyncToggle" onchange="window.__ccToggleNwSync()" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="label" style="margin-top:14px">By APR — Pay These First</div>
+      <div class="apr-debt-list" id="aprDebtList"></div>
+      <div class="monthly-cost" id="monthlyCostLine"></div>
+    </div>
+  </div>
+
+  <!-- ===== REWARDS ===== -->
+  <div class="section" data-section="rewards" style="display:none">
+    <div class="section-title"><span class="section-title-text">REWARDS</span></div>
+    <div class="card">
+      <div class="label">Cards Summary</div>
+      <div id="rewardCardList"></div>
+      <div id="rewardCardsEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:12px 0;display:none">Add cards in the Balances tab</div>
+    </div>
+    <div class="card">
+      <div class="label">Log Reward</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="cc-form-label">Card</div>
+          <select class="cc-input" id="rwCard"></select>
+        </div>
+        <div>
+          <div class="cc-form-label">Amount Earned</div>
+          <input class="cc-input" type="number" id="rwAmount" placeholder="0.00" step="0.01" min="0" />
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="cc-form-label">Category</div>
+          <select class="cc-input" id="rwCat">
+            <option value="dining">Dining</option>
+            <option value="travel">Travel</option>
+            <option value="gas">Gas</option>
+            <option value="grocery">Grocery</option>
+            <option value="shopping">Shopping</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <div class="cc-form-label">Note (optional)</div>
+          <input class="cc-input" type="text" id="rwNote" placeholder="e.g. United flight" />
+        </div>
+      </div>
+      <button class="cc-add-btn" onclick="window.__ccLogReward()">Log Reward</button>
+      <div class="feedback" id="rwFeedback"></div>
+    </div>
+    <div class="card">
+      <div class="label">Reward History</div>
+      <div id="rwHistList"></div>
+      <div id="rwHistEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:12px 0;display:none">No rewards logged yet</div>
+    </div>
+  </div>
+
+  <!-- ===== SPENDING OPTIMIZER ===== -->
+  <div class="section" data-section="optimizer" style="display:none">
+    <div class="section-title"><span class="section-title-text">SPENDING OPTIMIZER</span></div>
+    <div class="card">
+      <div class="label" style="margin-bottom:4px">Best Card per Category</div>
+      <div style="font-size:11px;color:var(--text-quaternary);margin-bottom:14px">Tap "Edit" to set reward rates for each card in that category</div>
+      <div id="optCatList"></div>
+    </div>
+    <div class="card" id="optRatesCard" style="display:none">
+      <div class="label" id="optRatesTitle">Rates for Dining</div>
+      <div id="optRatesList"></div>
+      <button class="quick-add-btn" style="margin-top:10px;width:100%;font-size:12px" onclick="window.__optCloseRates()">Done</button>
+    </div>
+  </div>
+
+  <!-- ===== PLAID SYNC ===== -->
+  <div class="section" data-section="plaid" style="display:none">
+    <div class="section-title"><span class="section-title-text">PLAID SYNC</span></div>
+    <div class="card">
+      <div class="label">Connected Accounts</div>
+      <div id="plaidInstitutionList"></div>
+      <div id="plaidEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:12px 0;display:none">No accounts connected</div>
+      <button class="plaid-connect-btn" style="margin-top:12px" onclick="window.__plaidOpenLink()">
+        <span>🔗</span> Connect Bank / Card Account
+      </button>
+      <div class="plaid-sandbox-note">Sandbox mode — use test credentials to verify setup</div>
+      <button class="plaid-sync-btn" id="plaidSyncBtn" onclick="window.__plaidSyncBalances()" style="display:none">
+        ↻ Sync Balances to Cards
+      </button>
+      <div class="plaid-status" id="plaidStatus"></div>
+    </div>
+    <div class="card">
+      <div class="label">Recent Transactions</div>
+      <div id="plaidTxList"></div>
+      <div id="plaidTxEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:12px 0">Connect an account to view transactions</div>
+      <button class="quick-add-btn" id="plaidTxBtn" style="display:none;margin-top:10px;width:100%;font-size:12px" onclick="window.__plaidFetchTx()">Load Transactions</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom tab bar -->
+<nav class="tab-bar">
+  <button class="bot-tab active" data-tab="cc">
+    <span class="bot-tab-icon">💳</span><span class="bot-tab-label">Balances</span>
+  </button>
+  <button class="bot-tab" data-tab="liability">
+    <span class="bot-tab-icon">📉</span><span class="bot-tab-label">Liability</span>
+  </button>
+  <button class="bot-tab" data-tab="rewards">
+    <span class="bot-tab-icon">🎁</span><span class="bot-tab-label">Rewards</span>
+  </button>
+  <button class="bot-tab" data-tab="optimizer">
+    <span class="bot-tab-icon">⚡</span><span class="bot-tab-label">Optimizer</span>
+  </button>
+  <button class="bot-tab" data-tab="plaid">
+    <span class="bot-tab-icon">🔗</span><span class="bot-tab-label">Plaid</span>
+  </button>
+</nav>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Storage helpers ──────────────────────────────────────────────
+  function storeGet(k) { try { const v = localStorage.getItem(k); return v == null ? null : JSON.parse(v); } catch { return null; } }
+  function storeSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+  const CC_KEY       = 'cc:cards';
+  const RW_KEY       = 'cc:rewards_log';
+  const OPT_KEY      = 'cc:optimizer_rates';   // {cardId: {cat: rate}}
+  const PLAID_KEY    = 'cc:plaid_items';        // [{itemId, institution, accounts:[]}]
+  const DEVICE_KEY   = 'cc:device_id';
+  const SYNC_KEY     = 'cc:nw_sync';
+  const TAB_KEY      = 'cc:active_tab';
+
+  const CC_COLORS = ['#FF6B6B','#F2C063','#6BE3A4','#7DD3FC','#B794F4','#E07658','#94A3B8'];
+
+  function getCards()      { return storeGet(CC_KEY)    || []; }
+  function saveCards(c)    { storeSet(CC_KEY, c); }
+  function getRewards()    { return storeGet(RW_KEY)    || []; }
+  function saveRewards(r)  { storeSet(RW_KEY, r); }
+  function getOptRates()   { return storeGet(OPT_KEY)   || {}; }
+  function saveOptRates(o) { storeSet(OPT_KEY, o); }
+  function getPlaidItems() { return storeGet(PLAID_KEY) || []; }
+  function savePlaidItems(p){ storeSet(PLAID_KEY, p); }
+
+  function getDeviceId() {
+    let id = storeGet(DEVICE_KEY);
+    if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); storeSet(DEVICE_KEY, id); }
+    return id;
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtUsd(n) {
+    return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ── Tab switching ────────────────────────────────────────────────
+  const TABS = ['cc','liability','rewards','optimizer','plaid'];
+  function setTab(name) {
+    if (!TABS.includes(name)) name = 'cc';
+    TABS.forEach(t => {
+      const s = document.querySelector('[data-section="' + t + '"]');
+      const b = document.querySelector('[data-tab="' + t + '"]');
+      if (s) s.style.display = (t === name) ? '' : 'none';
+      if (b) b.classList.toggle('active', t === name);
+    });
+    storeSet(TAB_KEY, name);
+    if (name === 'liability') renderLiability();
+    if (name === 'rewards')   { renderRewardCards(); renderRwHistory(); populateRwCardSel(); }
+    if (name === 'optimizer') renderOptimizer();
+    if (name === 'plaid')     renderPlaid();
+  }
+  document.querySelectorAll('.bot-tab').forEach(btn => {
+    btn.addEventListener('click', () => setTab(btn.dataset.tab));
+  });
+
+  // ── Color picker ─────────────────────────────────────────────────
+  let _selectedColor = CC_COLORS[0];
+  (function initColorPicker() {
+    const picker = document.getElementById('ccColorPicker');
+    CC_COLORS.forEach(c => {
+      const dot = document.createElement('div');
+      dot.className = 'cc-color-dot' + (c === _selectedColor ? ' selected' : '');
+      dot.style.background = c;
+      dot.addEventListener('click', () => {
+        _selectedColor = c;
+        picker.querySelectorAll('.cc-color-dot').forEach(d => d.classList.toggle('selected', d.style.background === c || d.style.backgroundColor === c));
+      });
+      picker.appendChild(dot);
+    });
+  })();
+
+  // ── Render Balances ──────────────────────────────────────────────
+  function renderCards() {
+    const cards = getCards();
+    const list  = document.getElementById('ccCardList');
+    const empty = document.getElementById('ccEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+
+    let totalBal = 0, totalLimit = 0;
+    cards.forEach((card, idx) => {
+      totalBal   += Number(card.balance) || 0;
+      totalLimit += Number(card.limit)   || 0;
+      const util = card.limit > 0 ? Math.min((card.balance / card.limit) * 100, 100) : 0;
+      const utilClass = util < 30 ? 'ok' : util < 70 ? 'warning' : 'danger';
+      const item = document.createElement('div');
+      item.className = 'cc-card-item';
+      item.style.setProperty('--c', card.color || '#888');
+      item.innerHTML =
+        '<div class="cc-card-top">' +
+          '<span class="cc-card-name cc-editable-name" data-idx="' + idx + '">' + escHtml(card.name) + '</span>' +
+          '<button class="cc-card-del" onclick="window.__ccDelCard(' + idx + ')">×</button>' +
+        '</div>' +
+        '<div class="cc-bal-row">' +
+          '<span class="cc-bal cc-editable-bal" data-idx="' + idx + '" style="color:' + (card.color||'#FF6B6B') + '">' + fmtUsd(card.balance) + '</span>' +
+          '<span class="cc-limit">of ' + fmtUsd(card.limit) + ' limit</span>' +
+        '</div>' +
+        '<div class="cc-util-bar-wrap"><div class="cc-util-bar ' + utilClass + '" style="width:' + util.toFixed(1) + '%"></div></div>' +
+        '<div class="cc-meta-row">' +
+          (card.apr    ? '<span class="cc-meta-chip"><strong>' + card.apr + '%</strong> APR</span>' : '') +
+          (card.dueDay ? '<span class="cc-meta-chip">Due <strong>day ' + card.dueDay + '</strong></span>' : '') +
+          (card.minPmt ? '<span class="cc-meta-chip">Min <strong>' + fmtUsd(card.minPmt) + '</strong></span>' : '') +
+          (card.rewardType && card.rewardType !== 'none' ? '<span class="cc-meta-chip"><strong>' + (card.rewardBase||0) + (card.rewardType==='cashback'?'%':'x') + '</strong> ' + card.rewardType + '</span>' : '') +
+        '</div>';
+      list.appendChild(item);
+    });
+
+    // Inline edit: name
+    list.querySelectorAll('.cc-editable-name').forEach(el => {
+      el.style.cursor = 'pointer'; el.title = 'Tap to rename';
+      el.addEventListener('click', () => beginNameEdit(el, parseInt(el.dataset.idx)));
+    });
+    // Inline edit: balance
+    list.querySelectorAll('.cc-editable-bal').forEach(el => {
+      el.style.cursor = 'pointer'; el.title = 'Tap to update balance';
+      el.addEventListener('click', () => beginBalEdit(el, parseInt(el.dataset.idx)));
+    });
+
+    const avail = Math.max(0, totalLimit - totalBal);
+    const util  = totalLimit > 0 ? (totalBal / totalLimit * 100) : 0;
+    const utilEl = document.getElementById('ccUtilPct');
+    if (utilEl) { utilEl.textContent = util.toFixed(1) + '%'; utilEl.className = 'cc-stat-val ' + (util < 30 ? 'ok' : util < 70 ? 'warning' : 'danger'); }
+    const balEl = document.getElementById('ccTotalBal'); if (balEl) balEl.textContent = fmtUsd(totalBal);
+    const avEl  = document.getElementById('ccTotalAvail'); if (avEl) avEl.textContent = fmtUsd(avail);
+    if (empty) empty.style.display = cards.length ? 'none' : '';
+  }
+
+  function beginNameEdit(el, idx) {
+    if (el.querySelector('input')) return;
+    const cards = getCards();
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = cards[idx].name || '';
+    input.style.cssText = 'background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:var(--text-primary);font-family:var(--font);font-size:14px;font-weight:600;border-radius:4px;padding:2px 6px;width:140px;outline:none;';
+    el.textContent = ''; el.appendChild(input);
+    input.focus(); input.select();
+    let saved = false;
+    function save() { if (saved) return; saved = true; const v = input.value.trim(); if (v) { cards[idx].name = v; saveCards(cards); } renderCards(); }
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } else if (e.key === 'Escape') { saved = true; renderCards(); } });
+    input.addEventListener('blur', save);
+  }
+
+  function beginBalEdit(el, idx) {
+    if (el.querySelector('input')) return;
+    const cards = getCards();
+    const input = document.createElement('input');
+    input.type = 'number'; input.step = '0.01'; input.min = '0'; input.value = String(cards[idx].balance || 0);
+    input.style.cssText = 'background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:' + (cards[idx].color||'#FF6B6B') + ';font-family:var(--font-mono);font-size:18px;font-weight:700;border-radius:4px;padding:2px 6px;width:120px;outline:none;';
+    el.textContent = ''; el.appendChild(input);
+    input.focus(); input.select();
+    let saved = false;
+    function save() { if (saved) return; saved = true; const v = parseFloat(input.value); if (!isNaN(v) && v >= 0) { cards[idx].balance = v; saveCards(cards); syncNwIfEnabled(); } renderCards(); }
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); save(); } else if (e.key === 'Escape') { saved = true; renderCards(); } });
+    input.addEventListener('blur', save);
+  }
+
+  window.__ccAddCard = function () {
+    const name    = (document.getElementById('ccName').value || '').trim();
+    const balance = parseFloat(document.getElementById('ccBalance').value);
+    const limit   = parseFloat(document.getElementById('ccLimit').value);
+    const apr     = parseFloat(document.getElementById('ccApr').value);
+    const dueDay  = parseInt(document.getElementById('ccDueDay').value);
+    const minPmt  = parseFloat(document.getElementById('ccMinPmt').value);
+    const rwType  = document.getElementById('ccRewardType').value;
+    const rwBase  = parseFloat(document.getElementById('ccRewardBase').value);
+    const fb = document.getElementById('ccFeedback');
+
+    if (!name) { if (fb) { fb.textContent = 'Card name is required.'; fb.className = 'feedback err'; } return; }
+    if (isNaN(balance) || balance < 0) { if (fb) { fb.textContent = 'Enter a valid balance.'; fb.className = 'feedback err'; } return; }
+
+    const card = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
+      name, balance,
+      limit: isNaN(limit) ? 0 : limit,
+      apr: isNaN(apr) ? 0 : apr,
+      dueDay: isNaN(dueDay) ? 0 : dueDay,
+      minPmt: isNaN(minPmt) ? 0 : minPmt,
+      rewardType: rwType,
+      rewardBase: isNaN(rwBase) ? 0 : rwBase,
+      color: _selectedColor
+    };
+    const cards = getCards();
+    cards.push(card);
+    saveCards(cards);
+    syncNwIfEnabled();
+    renderCards();
+    ['ccName','ccBalance','ccLimit','ccApr','ccDueDay','ccMinPmt','ccRewardBase'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('ccRewardType').value = 'none';
+    if (fb) { fb.textContent = card.name + ' added.'; fb.className = 'feedback ok'; setTimeout(() => { fb.textContent = ''; }, 2500); }
+  };
+
+  window.__ccDelCard = function (idx) {
+    const cards = getCards();
+    if (!confirm('Remove "' + (cards[idx] && cards[idx].name) + '"?')) return;
+    cards.splice(idx, 1);
+    saveCards(cards);
+    syncNwIfEnabled();
+    renderCards();
+  };
+
+  // ── NW Liability Sync ────────────────────────────────────────────
+  function syncNwIfEnabled() {
+    if (!storeGet(SYNC_KEY)) return;
+    const total = getCards().reduce((s, c) => s + (Number(c.balance) || 0), 0);
+    const items = storeGet('nw:other') || [];
+    const existing = items.find(it => it._ccSync);
+    if (existing) { existing.amount = -total; }
+    else { items.push({ name: 'CC Debt', amount: -total, _ccSync: true }); }
+    storeSet('nw:other', items);
+  }
+
+  function clearNwSync() {
+    const items = (storeGet('nw:other') || []).filter(it => !it._ccSync);
+    storeSet('nw:other', items);
+  }
+
+  window.__ccToggleNwSync = function () {
+    const on = document.getElementById('nwSyncToggle').checked;
+    storeSet(SYNC_KEY, on);
+    if (on) syncNwIfEnabled(); else clearNwSync();
+  };
+
+  // ── Render Liability ─────────────────────────────────────────────
+  function renderLiability() {
+    const cards = getCards();
+    const total = cards.reduce((s, c) => s + (Number(c.balance) || 0), 0);
+    const el = document.getElementById('liabilityTotal'); if (el) el.textContent = fmtUsd(total);
+
+    const toggle = document.getElementById('nwSyncToggle');
+    if (toggle) toggle.checked = !!storeGet(SYNC_KEY);
+
+    const sorted = cards.slice().sort((a, b) => (Number(b.apr)||0) - (Number(a.apr)||0));
+    const list = document.getElementById('aprDebtList'); if (!list) return;
+    list.innerHTML = '';
+    let monthlyInterest = 0;
+    sorted.forEach(c => {
+      const bal = Number(c.balance) || 0;
+      const apr = Number(c.apr) || 0;
+      const monthly = bal * (apr / 100 / 12);
+      monthlyInterest += monthly;
+      const row = document.createElement('div');
+      row.className = 'apr-debt-row';
+      row.innerHTML = '<span class="apr-debt-name" style="border-left:3px solid ' + (c.color||'#888') + ';padding-left:8px">' + escHtml(c.name) + '</span>' +
+        '<div class="apr-debt-right"><div class="apr-debt-bal">' + fmtUsd(bal) + '</div><div class="apr-debt-apr">' + apr.toFixed(2) + '% APR · ' + fmtUsd(monthly) + '/mo interest</div></div>';
+      list.appendChild(row);
+    });
+    const costEl = document.getElementById('monthlyCostLine');
+    if (costEl) costEl.textContent = cards.length ? 'Est. monthly interest cost: ' + fmtUsd(monthlyInterest) : '';
+  }
+
+  // ── Render Rewards ───────────────────────────────────────────────
+  function populateRwCardSel() {
+    const sel = document.getElementById('rwCard'); if (!sel) return;
+    const cards = getCards();
+    sel.innerHTML = cards.length
+      ? cards.map(c => '<option value="' + c.id + '">' + escHtml(c.name) + '</option>').join('')
+      : '<option value="">— add a card first —</option>';
+  }
+
+  function renderRewardCards() {
+    const cards = getCards();
+    const rewards = getRewards();
+    const list  = document.getElementById('rewardCardList');
+    const empty = document.getElementById('rewardCardsEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!cards.length) { list.style.display = 'none'; if (empty) empty.style.display = ''; return; }
+    list.style.display = ''; if (empty) empty.style.display = 'none';
+    cards.forEach(c => {
+      const earned = rewards.filter(r => r.cardId === c.id).reduce((s, r) => s + (Number(r.amount)||0), 0);
+      const row = document.createElement('div');
+      row.className = 'reward-card-row';
+      row.style.setProperty('--c', c.color || '#888');
+      row.innerHTML = '<div><div class="reward-card-name">' + escHtml(c.name) + '</div><div class="reward-card-type">' + (c.rewardType !== 'none' ? c.rewardType : '—') + '</div></div>' +
+        '<div><div class="reward-card-earned">' + (c.rewardType === 'cashback' ? fmtUsd(earned) : earned.toFixed(0) + ' pts') + '</div><div class="reward-card-rate">' + (c.rewardBase ? c.rewardBase + (c.rewardType==='cashback'?'%':'x') + ' base' : '') + '</div></div>';
+      list.appendChild(row);
+    });
+  }
+
+  function renderRwHistory() {
+    const rewards = getRewards().slice().sort((a,b)=>b.ts-a.ts);
+    const list  = document.getElementById('rwHistList');
+    const empty = document.getElementById('rwHistEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!rewards.length) { list.style.display = 'none'; if (empty) empty.style.display = ''; return; }
+    list.style.display = ''; if (empty) empty.style.display = 'none';
+    const cards = getCards();
+    rewards.slice(0, 40).forEach((r, i) => {
+      const card = cards.find(c => c.id === r.cardId);
+      const row = document.createElement('div');
+      row.className = 'reward-log-item';
+      const d = new Date(r.ts);
+      const dateStr = (d.getMonth()+1) + '/' + d.getDate();
+      row.innerHTML = '<span class="reward-log-left">' + escHtml(card ? card.name : '?') + (r.note ? ' · ' + escHtml(r.note) : '') + '<span class="cc-meta-chip" style="margin-left:6px">' + escHtml(r.cat||'other') + '</span></span>' +
+        '<span><span class="reward-log-right">+' + (card && card.rewardType==='cashback' ? fmtUsd(r.amount) : (r.amount||0).toFixed(0)+' pts') + '</span><span class="reward-log-date">' + dateStr + '</span></span>';
+      // delete button
+      const del = document.createElement('button');
+      del.textContent = '×'; del.style.cssText = 'background:none;border:none;color:var(--text-quaternary);cursor:pointer;font-size:14px;margin-left:8px;';
+      del.addEventListener('click', () => {
+        const arr = getRewards(); arr.splice(arr.length - 1 - i + (getRewards().length - rewards.length), 1);
+        const sorted2 = getRewards().slice().sort((a,b)=>b.ts-a.ts);
+        const origIdx = getRewards().findIndex(x => x === rewards[i]);
+        const all = getRewards(); const si = all.indexOf(rewards[i]);
+        if (si > -1) { all.splice(si, 1); saveRewards(all); }
+        renderRwHistory(); renderRewardCards();
+      });
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
+  window.__ccLogReward = function () {
+    const cardId = document.getElementById('rwCard').value;
+    const amount = parseFloat(document.getElementById('rwAmount').value);
+    const cat    = document.getElementById('rwCat').value;
+    const note   = (document.getElementById('rwNote').value || '').trim();
+    const fb     = document.getElementById('rwFeedback');
+    if (!cardId || cardId === '') { if (fb) { fb.textContent = 'Select a card first.'; fb.className = 'feedback err'; } return; }
+    if (isNaN(amount) || amount <= 0) { if (fb) { fb.textContent = 'Enter a valid amount.'; fb.className = 'feedback err'; } return; }
+    const rewards = getRewards();
+    rewards.push({ ts: Date.now(), cardId, amount, cat, note });
+    saveRewards(rewards);
+    document.getElementById('rwAmount').value = '';
+    document.getElementById('rwNote').value = '';
+    if (fb) { fb.textContent = 'Logged!'; fb.className = 'feedback ok'; setTimeout(()=>{ fb.textContent=''; }, 2000); }
+    renderRewardCards(); renderRwHistory();
+  };
+
+  // ── Optimizer ────────────────────────────────────────────────────
+  const OPT_CATS = [
+    { key:'dining',   label:'Dining',    emoji:'🍽️' },
+    { key:'travel',   label:'Travel',    emoji:'✈️' },
+    { key:'gas',      label:'Gas',       emoji:'⛽' },
+    { key:'grocery',  label:'Grocery',   emoji:'🛒' },
+    { key:'shopping', label:'Shopping',  emoji:'🛍️' },
+    { key:'other',    label:'Other',     emoji:'💳' }
+  ];
+  let _optOpenCat = null;
+
+  function renderOptimizer() {
+    const cards = getCards();
+    const rates = getOptRates();
+    const list  = document.getElementById('optCatList'); if (!list) return;
+    list.innerHTML = '';
+
+    OPT_CATS.forEach(cat => {
+      let bestCard = null, bestRate = -1;
+      cards.forEach(c => {
+        const r = (rates[c.id] && rates[c.id][cat.key] != null) ? Number(rates[c.id][cat.key]) : (c.rewardBase || 0);
+        if (r > bestRate) { bestRate = r; bestCard = c; }
+      });
+
+      const row = document.createElement('div');
+      row.className = 'opt-cat-row';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'opt-edit-btn'; editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => openOptRates(cat));
+
+      row.innerHTML = '<span class="opt-cat-name">' + cat.emoji + ' ' + cat.label + '</span>';
+      const mid = document.createElement('div'); mid.className = 'opt-best-card';
+      if (bestCard) {
+        mid.innerHTML = '<div class="opt-card-dot" style="background:' + (bestCard.color||'#888') + '"></div>' +
+          '<span class="opt-card-name">' + escHtml(bestCard.name) + '</span>' +
+          '<span class="opt-rate-badge">' + bestRate.toFixed(1) + (bestCard.rewardType==='cashback'?'%':'x') + '</span>';
+      } else {
+        mid.innerHTML = '<span class="opt-empty">Add cards first</span>';
+      }
+      row.appendChild(mid); row.appendChild(editBtn);
+      list.appendChild(row);
+    });
+  }
+
+  function openOptRates(cat) {
+    _optOpenCat = cat;
+    const panel = document.getElementById('optRatesCard');
+    const title = document.getElementById('optRatesTitle');
+    const rList = document.getElementById('optRatesList');
+    if (!panel || !rList) return;
+    panel.style.display = '';
+    if (title) title.textContent = 'Rates for ' + cat.label;
+    rList.innerHTML = '';
+    const cards = getCards();
+    const rates = getOptRates();
+    cards.forEach(c => {
+      const cur = (rates[c.id] && rates[c.id][cat.key] != null) ? rates[c.id][cat.key] : (c.rewardBase || '');
+      const row = document.createElement('div');
+      row.className = 'opt-rate-input-row';
+      const lbl = document.createElement('span'); lbl.className = 'opt-rate-card-lbl';
+      lbl.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (c.color||'#888') + ';margin-right:6px"></span>' + escHtml(c.name);
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.step = '0.01'; inp.min = '0'; inp.value = String(cur);
+      inp.placeholder = c.rewardBase || '0'; inp.className = 'cc-input'; inp.style.width = '80px'; inp.style.textAlign = 'right';
+      inp.addEventListener('change', () => {
+        const all = getOptRates();
+        if (!all[c.id]) all[c.id] = {};
+        const v = parseFloat(inp.value);
+        all[c.id][cat.key] = isNaN(v) ? (c.rewardBase || 0) : v;
+        saveOptRates(all);
+        renderOptimizer();
+      });
+      row.appendChild(lbl); row.appendChild(inp);
+      rList.appendChild(row);
+    });
+    if (!cards.length) rList.innerHTML = '<div style="font-size:12px;color:var(--text-quaternary)">Add cards in the Balances tab first</div>';
+  }
+
+  window.__optCloseRates = function () {
+    const panel = document.getElementById('optRatesCard'); if (panel) panel.style.display = 'none';
+    _optOpenCat = null;
+  };
+
+  // ── Plaid ────────────────────────────────────────────────────────
+  function renderPlaid() {
+    const items = getPlaidItems();
+    const list  = document.getElementById('plaidInstitutionList');
+    const empty = document.getElementById('plaidEmpty');
+    const syncBtn = document.getElementById('plaidSyncBtn');
+    const txBtn   = document.getElementById('plaidTxBtn');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!items.length) {
+      if (empty) empty.style.display = '';
+      if (syncBtn) syncBtn.style.display = 'none';
+      if (txBtn)   txBtn.style.display   = 'none';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    if (syncBtn) syncBtn.style.display = '';
+    if (txBtn)   txBtn.style.display   = '';
+    items.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'plaid-institution';
+      const accts = (item.accounts || []).length;
+      row.innerHTML = '<div><div class="plaid-inst-name">' + escHtml(item.institution||'Unknown') + '</div><div class="plaid-inst-sub">' + accts + ' account' + (accts===1?'':'s') + ' · item ' + escHtml((item.itemId||'').slice(0,8)) + '…</div></div>';
+      const del = document.createElement('button'); del.className = 'plaid-inst-del'; del.textContent = '×';
+      del.addEventListener('click', () => {
+        if (!confirm('Disconnect "' + (item.institution||'this account') + '"?')) return;
+        const arr = getPlaidItems(); arr.splice(i, 1); savePlaidItems(arr); renderPlaid();
+      });
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
+  window.__plaidOpenLink = async function () {
+    const statusEl = document.getElementById('plaidStatus');
+    if (statusEl) statusEl.textContent = 'Creating link token…';
+    try {
+      const res  = await fetch('/api/create-link-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device_id: getDeviceId() }) });
+      const data = await res.json();
+      if (!res.ok || !data.link_token) throw new Error(data.error || 'Failed to create link token');
+      if (statusEl) statusEl.textContent = '';
+      const handler = window.Plaid && window.Plaid.create({
+        token: data.link_token,
+        onSuccess: async (public_token, metadata) => {
+          if (statusEl) statusEl.textContent = 'Exchanging token…';
+          try {
+            const er = await fetch('/api/exchange-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public_token, device_id: getDeviceId(), institution: metadata.institution && metadata.institution.name }) });
+            const ed = await er.json();
+            if (!er.ok) throw new Error(ed.error || 'Exchange failed');
+            const items = getPlaidItems();
+            items.push({ itemId: ed.item_id, institution: ed.institution || (metadata.institution && metadata.institution.name) || 'Unknown', accounts: ed.accounts || [] });
+            savePlaidItems(items);
+            if (statusEl) statusEl.textContent = 'Connected!';
+            setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+            renderPlaid();
+          } catch (e) { if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; } }
+        },
+        onExit: (err) => {
+          if (err) { if (statusEl) { statusEl.textContent = err.display_message || err.error_message || 'Exited.'; statusEl.style.color = 'var(--text-tertiary)'; } }
+          else { if (statusEl) statusEl.textContent = ''; }
+        },
+      });
+      if (handler) handler.open();
+      else throw new Error('Plaid Link SDK not loaded');
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+    }
+  };
+
+  window.__plaidSyncBalances = async function () {
+    const statusEl = document.getElementById('plaidStatus');
+    const items = getPlaidItems();
+    if (!items.length) return;
+    if (statusEl) statusEl.textContent = 'Fetching balances…';
+    try {
+      const res  = await fetch('/api/get-accounts?device_id=' + encodeURIComponent(getDeviceId()));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fetch failed');
+      const accounts = data.accounts || [];
+      // Update stored items with fresh account data
+      const updatedItems = getPlaidItems().map(item => {
+        const itemAccts = accounts.filter(a => a.item_id === item.itemId);
+        return { ...item, accounts: itemAccts.length ? itemAccts : item.accounts };
+      });
+      savePlaidItems(updatedItems);
+      // Match to CC cards by account name and update balance
+      const cards = getCards();
+      let matched = 0;
+      accounts.forEach(acct => {
+        const card = cards.find(c => c.plaidAccountId === acct.account_id);
+        if (card && acct.balances) {
+          card.balance = acct.balances.current || card.balance;
+          matched++;
+        }
+      });
+      if (matched) { saveCards(cards); syncNwIfEnabled(); renderCards(); }
+      if (statusEl) { statusEl.textContent = 'Synced! ' + (matched ? matched + ' card(s) updated.' : 'No cards matched — link cards to Plaid accounts via API.'); statusEl.style.color = matched ? 'var(--success)' : 'var(--text-tertiary)'; }
+      renderPlaid();
+    } catch (e) { if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; } }
+  };
+
+  window.__plaidFetchTx = async function () {
+    const statusEl = document.getElementById('plaidStatus');
+    const txList   = document.getElementById('plaidTxList');
+    const txEmpty  = document.getElementById('plaidTxEmpty');
+    if (!txList) return;
+    if (statusEl) statusEl.textContent = 'Loading transactions…';
+    try {
+      const res  = await fetch('/api/get-transactions?device_id=' + encodeURIComponent(getDeviceId()));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fetch failed');
+      const txs = data.transactions || [];
+      if (statusEl) statusEl.textContent = '';
+      if (!txs.length) { txList.innerHTML = ''; if (txEmpty) txEmpty.style.display = ''; return; }
+      if (txEmpty) txEmpty.style.display = 'none';
+      txList.innerHTML = txs.slice(0, 50).map(tx => {
+        const amt = tx.amount; // positive = debit in Plaid
+        return '<div class="reward-log-item">' +
+          '<span class="reward-log-left">' + escHtml(tx.merchant_name || tx.name || '?') + '</span>' +
+          '<span><span class="reward-log-right" style="color:' + (amt < 0 ? 'var(--success)' : 'var(--danger)') + '">' + (amt < 0 ? '+' : '-') + fmtUsd(Math.abs(amt)) + '</span>' +
+          '<span class="reward-log-date">' + escHtml(tx.date || '') + '</span></span>' +
+          '</div>';
+      }).join('');
+    } catch (e) { if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; } }
+  };
+
+  // ── Boot ─────────────────────────────────────────────────────────
+  renderCards();
+  const savedTab = storeGet(TAB_KEY);
+  setTab(savedTab && TABS.includes(savedTab) ? savedTab : 'cc');
+
+})();
+</script>
+</body>
+</html>
