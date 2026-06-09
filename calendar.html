@@ -575,6 +575,7 @@ select.form-input { cursor: pointer; }
       populateCalSelect();
       markUpdated();
     } catch (e) {
+      console.error('[CAL] refreshData error:', e.message, e);
       if (['not_authed','token_expired','scope_error'].includes(e.message)) {
         showNotConnected();
       } else {
@@ -606,8 +607,11 @@ select.form-input { cursor: pointer; }
   // ── Init ───────────────────────────────────────────────────
   async function init() {
     let tok = getToken();
+    console.log('[CAL] init: token from storage:', tok ? tok.slice(0,20)+'…' : null);
     if (!tok) tok = await refreshAccessToken();
+    console.log('[CAL] init: token after refresh:', tok ? tok.slice(0,20)+'…' : null);
     if (!tok) {
+      console.log('[CAL] init: no token — showing not-connected');
       // notConnected card is already visible by default
       return;
     }
