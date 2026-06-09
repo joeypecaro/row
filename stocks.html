@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Stocks</title>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg: #0A0A0B;
+  --bg-deep: #050506;
+  --bg-card: rgba(255,255,255,0.04);
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --text-quaternary: #4D4B47;
+  --border: transparent;
+  --accent: #C9A36B;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger: #FF6B6B;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -2;
+  background:
+    radial-gradient(60% 45% at 78% 12%, rgba(107,227,164,0.10) 0%, transparent 55%),
+    radial-gradient(50% 40% at 20% 88%, rgba(100,160,255,0.06) 0%, transparent 55%),
+    linear-gradient(180deg, #0A0A0B 0%, #050506 100%);
+  filter: blur(40px) saturate(1.1);
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 100px;
+}
+
+/* Back button */
+.fin-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 10px;
+  margin: 0 0 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.fin-back-btn:hover { background: rgba(255,255,255,0.07); }
+
+/* ───── Portfolio hero ───── */
+.port-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.port-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.port-total {
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.port-day {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.port-day.up   { color: var(--success); }
+.port-day.down { color: var(--danger); }
+.port-gain {
+  margin-top: 3px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+.port-gain .up   { color: var(--success); }
+.port-gain .down { color: var(--danger); }
+
+.port-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.currency-sel {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+  outline: none;
+}
+.port-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.port-btn:hover:not(:disabled)   { background: rgba(255,255,255,0.09); }
+.port-btn:disabled                { opacity: 0.4; cursor: not-allowed; }
+.port-btn.active                  { color: var(--accent); }
+
+.port-updated {
+  font-size: 11px;
+  color: var(--text-quaternary);
+  margin: 4px 0 16px;
+}
+.port-error {
+  background: rgba(255,107,107,0.08);
+  border: 1px solid rgba(255,107,107,0.20);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--danger);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* ───── Holdings ───── */
+.holdings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.holdings-count { font-size: 11px; color: var(--text-quaternary); }
+
+.holdings-empty {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(255,255,255,0.07);
+  margin-bottom: 16px;
+}
+
+.holding-card {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-md);
+  margin-bottom: 5px;
+  transition: background 0.15s;
+}
+.holding-card:hover { background: rgba(255,255,255,0.05); }
+
+.holding-ticker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-top: 2px;
+}
+.holding-ticker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 0.02em;
+  width: 100%;
+}
+.holding-ticker.up   { background: rgba(107,227,164,0.12); color: var(--success); }
+.holding-ticker.down { background: rgba(255,107,107,0.10); color: var(--danger); }
+.holding-ticker.flat { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+
+.holding-mid { min-width: 0; }
+.holding-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 3px;
+  margin-left: -3px;
+  transition: background 0.1s;
+}
+.holding-name:hover { background: rgba(255,255,255,0.06); }
+
+.holding-row2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.holding-shares {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.holding-shares:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+.holding-price { font-family: var(--font-mono); }
+
+.day-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.day-badge.up   { background: rgba(107,227,164,0.10); color: var(--success); }
+.day-badge.down { background: rgba(255,107,107,0.08); color: var(--danger); }
+
+.holding-gain-row {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.holding-gain-row .up   { color: var(--success); }
+.holding-gain-row .down { color: var(--danger); }
+
+.holding-nw-link {
+  font-size: 10px;
+  color: var(--text-quaternary);
+  margin-top: 3px;
+}
+
+.holding-right { text-align: right; flex-shrink: 0; }
+.holding-value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.holding-del {
+  display: block;
+  margin-top: 6px;
+  background: none;
+  border: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  font-size: 15px;
+  text-align: right;
+  padding: 0;
+  line-height: 1;
+}
+.holding-del:hover { color: var(--danger); }
+.holding-placeholder { font-size: 12px; color: var(--text-quaternary); font-family: var(--font-mono); }
+
+/* Edit input (shares / cost) */
+.inline-edit {
+  width: 90px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  border-radius: 5px;
+  outline: none;
+  text-align: right;
+}
+
+/* ───── Add form ───── */
+.add-card {
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.add-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+.add-form {
+  display: grid;
+  grid-template-columns: 90px 90px 130px 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+@media (max-width: 600px) {
+  .add-form { grid-template-columns: 1fr 1fr; }
+  #hTicker  { grid-column: 1 / -1; }
+  #addBtn   { grid-column: 1 / -1; }
+}
+.add-form input,
+.add-form select {
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+.add-form input::placeholder { color: var(--text-quaternary); }
+#hTicker { font-family: var(--font-mono); text-transform: uppercase; font-weight: 600; letter-spacing: 0.04em; }
+.add-btn {
+  padding: 8px 18px;
+  background: rgba(107,227,164,0.12);
+  border: 1px solid rgba(107,227,164,0.22);
+  border-radius: var(--radius-md);
+  color: var(--success);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.add-btn:hover { background: rgba(107,227,164,0.20); }
+.add-hint {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--text-quaternary);
+  line-height: 1.5;
+}
+.add-feedback {
+  margin-top: 7px;
+  font-size: 12px;
+  min-height: 16px;
+}
+
+.sync-note {
+  padding: 10px 14px;
+  background: rgba(242,192,99,0.05);
+  border: 1px solid rgba(242,192,99,0.12);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+.sync-note strong { color: var(--warning); }
+</style>
+</head>
+<body>
+<div id="topbar-root"></div>
+<div class="shell">
+
+  <a href="finance.html" class="fin-back-btn">← Finances</a>
+
+  <!-- Portfolio hero -->
+  <div class="port-hero">
+    <div>
+      <div class="port-label">Total portfolio</div>
+      <div class="port-total" id="portTotal">—</div>
+      <div class="port-day"  id="portDay"></div>
+      <div class="port-gain" id="portGain"></div>
+    </div>
+    <div class="port-actions">
+      <select class="currency-sel" id="stockCurrSel">
+        <option value="CHF">CHF</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+      <button class="port-btn" id="refreshBtn" onclick="window.__stockRefresh()">↻ Refresh</button>
+      <button class="port-btn" id="syncNwBtn"  onclick="window.__stockSyncNw()">⇅ Sync NW</button>
+    </div>
+  </div>
+  <div class="port-updated" id="portUpdated">Prices not yet loaded</div>
+  <div class="port-error"   id="portError" style="display:none"></div>
+
+  <!-- Holdings list -->
+  <div style="margin-bottom:16px">
+    <div class="holdings-header">
+      <span class="section-label">Holdings</span>
+      <span class="holdings-count" id="holdingsCount"></span>
+    </div>
+    <div id="holdingsList"></div>
+    <div class="holdings-empty" id="holdingsEmpty">No holdings yet — add your first position below.</div>
+  </div>
+
+  <!-- Add position form -->
+  <div class="add-card">
+    <div class="add-card-title">Add Position</div>
+    <div class="add-form">
+      <input id="hTicker"  type="text"   placeholder="AAPL" maxlength="12" autocapitalize="characters" />
+      <input id="hShares"  type="number" placeholder="Shares" step="0.0001" min="0.0001" />
+      <input id="hCost"    type="number" placeholder="Cost/sh in USD (opt)" step="0.01" min="0" />
+      <select id="hAccount">
+        <option value="">No NW link</option>
+      </select>
+      <button id="addBtn" class="add-btn" onclick="window.__stockAdd()">+ Add</button>
+    </div>
+    <div class="add-hint">
+      Ticker must match the symbol on Finnhub (e.g. AAPL, MSFT, NVDA). Cost/share is in USD and optional.
+      "NW link" syncs this holding's value into a Stocks/Investments account in Finance.
+    </div>
+    <div class="add-feedback" id="addFeedback"></div>
+  </div>
+
+  <div class="sync-note">
+    <strong>Sync NW</strong> updates the linked <em>Stocks / Investments</em> entries in your Finance net worth
+    with the current total market value (converted to your display currency).
+    Requires FINNHUB_API_KEY in Vercel environment variables.
+  </div>
+
+</div>
+<script>
+(function () {
+  'use strict';
+  // ── keys ──────────────────────────────────────────────────────────────────
+  const HOLDINGS_KEY = 'stocks:holdings';
+  const PRICES_KEY   = 'stocks:prices';
+  const LAST_TS_KEY  = 'stocks:last_refresh';
+  const CURRENCY_KEY = 'nw_currency';
+  const STALE_MS     = 5 * 60 * 1000; // 5 minutes
+
+  // ── state ─────────────────────────────────────────────────────────────────
+  let _rates    = { CHF: 1, USD: 1.10, EUR: 0.92, GBP: 0.79 };
+  let _currency = 'CHF';
+  let _prices   = {};
+  let _busy     = false;
+
+  // ── storage helpers ───────────────────────────────────────────────────────
+  function lsGet(k)     { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+  function lsSet(k, v)  { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+  function getHoldings()  { return lsGet(HOLDINGS_KEY) || []; }
+  function saveHoldings(h){ lsSet(HOLDINGS_KEY, h); }
+
+  // ── formatting ────────────────────────────────────────────────────────────
+  const SYM = { CHF: 'CHF ', USD: '$', EUR: '€', GBP: '£' };
+
+  function fmtMoney(chf) {
+    const rate = _rates[_currency] || 1;
+    const v    = (Number(chf) || 0) * rate;
+    const s    = SYM[_currency] || (_currency + ' ');
+    if (Math.abs(v) >= 1e6)  return s + (v / 1e6).toFixed(2)  + 'M';
+    if (Math.abs(v) >= 1e4)  return s + Math.round(v).toLocaleString('en-US');
+    if (Math.abs(v) >= 1e3)  return s + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return s + Math.abs(v) < 0.01 ? '0.00' : v.toFixed(2);
+  }
+
+  function usdToChf(usd) { return (Number(usd) || 0) / (_rates.USD || 1); }
+  function fmtUsd(usd)   { return fmtMoney(usdToChf(usd)); }
+
+  function fmtShares(n) {
+    const v = Number(n) || 0;
+    return v % 1 === 0 ? String(v) : v.toFixed(4).replace(/\.?0+$/, '');
+  }
+
+  function sign(n) { return n >= 0 ? '+' : ''; }
+
+  // ── exchange rates ────────────────────────────────────────────────────────
+  async function loadRates() {
+    try {
+      const r = await fetch('https://open.er-api.com/v6/latest/CHF');
+      const d = await r.json();
+      if (d && d.rates) {
+        _rates = { CHF: 1, USD: d.rates.USD || 1.10, EUR: d.rates.EUR || 0.92, GBP: d.rates.GBP || 0.79 };
+      }
+    } catch {}
+  }
+
+  // ── NW stocks items ───────────────────────────────────────────────────────
+  function getStocksNwItems() {
+    try { return JSON.parse(localStorage.getItem('nw:stocks')) || []; } catch { return []; }
+  }
+
+  function populateAccountSelect() {
+    const sel = document.getElementById('hAccount');
+    if (!sel) return;
+    const items = getStocksNwItems();
+    sel.innerHTML = '<option value="">No NW link</option>';
+    items.forEach(it => {
+      const o = document.createElement('option');
+      o.value = it.name; o.textContent = '📈 ' + it.name;
+      sel.appendChild(o);
+    });
+  }
+
+  // ── portfolio summary ─────────────────────────────────────────────────────
+  function renderSummary(holdings) {
+    let totalChf = 0, dayGainChf = 0, unrealGainChf = 0, unrealCount = 0;
+
+    holdings.forEach(h => {
+      const q = _prices[h.ticker];
+      if (!q || !(q.c > 0)) return;
+      const val = usdToChf(q.c) * h.shares;
+      totalChf += val;
+      dayGainChf += usdToChf(q.d) * h.shares;
+      if (h.costBasisUSD > 0) {
+        unrealGainChf += (usdToChf(q.c) - usdToChf(h.costBasisUSD)) * h.shares;
+        unrealCount++;
+      }
+    });
+
+    const totEl  = document.getElementById('portTotal');
+    const dayEl  = document.getElementById('portDay');
+    const gainEl = document.getElementById('portGain');
+
+    if (totEl) totEl.textContent = totalChf > 0 ? fmtMoney(totalChf) : '—';
+
+    if (dayEl) {
+      if (totalChf > 0) {
+        const dir  = dayGainChf >= 0 ? 'up' : 'down';
+        const prev = totalChf - dayGainChf;
+        const pct  = prev > 0 ? (dayGainChf / prev) * 100 : 0;
+        dayEl.className = 'port-day ' + dir;
+        dayEl.textContent = (dir === 'up' ? '▲ ' : '▼ ') + sign(dayGainChf) + fmtMoney(dayGainChf) +
+          ' (' + sign(pct) + pct.toFixed(2) + '%) today';
+      } else {
+        dayEl.className = 'port-day';
+        dayEl.textContent = '';
+      }
+    }
+
+    if (gainEl) {
+      if (unrealCount > 0) {
+        const dir = unrealGainChf >= 0 ? 'up' : 'down';
+        gainEl.innerHTML = 'Total gain: <span class="' + dir + '">' + sign(unrealGainChf) + fmtMoney(unrealGainChf) + '</span>';
+      } else {
+        gainEl.innerHTML = '';
+      }
+    }
+  }
+
+  // ── holdings list ─────────────────────────────────────────────────────────
+  function renderHoldings() {
+    const holdings = getHoldings();
+    const listEl   = document.getElementById('holdingsList');
+    const emptyEl  = document.getElementById('holdingsEmpty');
+    const countEl  = document.getElementById('holdingsCount');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = holdings.length + (holdings.length === 1 ? ' position' : ' positions');
+
+    if (!holdings.length) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      renderSummary([]);
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    listEl.innerHTML = '';
+
+    holdings.forEach((h, idx) => {
+      const q   = _prices[h.ticker];
+      const dir = !q ? 'flat' : q.c > 0 ? (q.d > 0 ? 'up' : q.d < 0 ? 'down' : 'flat') : 'flat';
+
+      const card = document.createElement('div');
+      card.className = 'holding-card';
+
+      // Left — ticker badge
+      const leftEl = document.createElement('div');
+      leftEl.className = 'holding-ticker-wrap';
+      const tickBadge = document.createElement('div');
+      tickBadge.className = 'holding-ticker ' + dir;
+      tickBadge.textContent = h.ticker;
+      leftEl.appendChild(tickBadge);
+
+      // Middle — name + details
+      const midEl = document.createElement('div');
+      midEl.className = 'holding-mid';
+
+      // Name (editable)
+      const nameEl = document.createElement('div');
+      nameEl.className = 'holding-name';
+      nameEl.textContent = h.name || h.ticker;
+      nameEl.title = 'Click to rename';
+      nameEl.addEventListener('click', () => beginEdit('name', nameEl, holdings, idx));
+      midEl.appendChild(nameEl);
+
+      // Row 2: shares · price · day badge
+      const row2 = document.createElement('div');
+      row2.className = 'holding-row2';
+
+      const sharesEl = document.createElement('span');
+      sharesEl.className = 'holding-shares';
+      sharesEl.textContent = fmtShares(h.shares) + ' sh';
+      sharesEl.title = 'Click to edit shares';
+      sharesEl.addEventListener('click', () => beginEdit('shares', sharesEl, holdings, idx));
+      row2.appendChild(sharesEl);
+
+      if (q && q.c > 0) {
+        const priceEl = document.createElement('span');
+        priceEl.className = 'holding-price';
+        priceEl.textContent = fmtUsd(q.c) + '/sh';
+        row2.appendChild(priceEl);
+
+        const badge = document.createElement('span');
+        badge.className = 'day-badge ' + dir;
+        badge.textContent = sign(q.d) + fmtUsd(q.d) + ' (' + sign(q.dp) + (Number(q.dp) || 0).toFixed(2) + '%)';
+        row2.appendChild(badge);
+      } else if (q && q._err) {
+        const errEl = document.createElement('span');
+        errEl.style.color = 'var(--danger)';
+        errEl.style.fontSize = '11px';
+        errEl.textContent = 'Error: ' + q._err;
+        row2.appendChild(errEl);
+      } else {
+        const ph = document.createElement('span');
+        ph.className = 'holding-placeholder';
+        ph.textContent = '—';
+        row2.appendChild(ph);
+      }
+      midEl.appendChild(row2);
+
+      // Row 3: cost basis + unrealized gain
+      if (q && q.c > 0 && h.costBasisUSD > 0) {
+        const gainChf   = (usdToChf(q.c) - usdToChf(h.costBasisUSD)) * h.shares;
+        const gainPct   = ((q.c - h.costBasisUSD) / h.costBasisUSD) * 100;
+        const gDir      = gainChf >= 0 ? 'up' : 'down';
+        const gainRow   = document.createElement('div');
+        gainRow.className = 'holding-gain-row';
+        const costEl = document.createElement('span');
+        costEl.className = 'holding-shares';
+        costEl.style.fontFamily = 'var(--font-mono)';
+        costEl.title = 'Click to edit cost basis';
+        costEl.textContent = 'cost $' + (Number(h.costBasisUSD) || 0).toFixed(2) + '/sh';
+        costEl.style.cursor = 'pointer';
+        costEl.addEventListener('click', () => beginEdit('cost', costEl, holdings, idx));
+        gainRow.appendChild(costEl);
+        const gainSpan = document.createElement('span');
+        gainSpan.className = gDir;
+        gainSpan.textContent = '  ' + sign(gainChf) + fmtMoney(gainChf) + ' (' + sign(gainPct) + gainPct.toFixed(1) + '%)';
+        gainRow.appendChild(gainSpan);
+        midEl.appendChild(gainRow);
+      } else if (q && q.c > 0) {
+        // No cost — show editable prompt
+        const costPrompt = document.createElement('div');
+        costPrompt.className = 'holding-gain-row';
+        costPrompt.style.cursor = 'pointer';
+        costPrompt.style.fontStyle = 'italic';
+        costPrompt.textContent = '+ add cost basis';
+        costPrompt.addEventListener('click', () => {
+          // Inline cost edit using a temporary placeholder element
+          const tmp = costPrompt;
+          beginEdit('cost', tmp, holdings, idx);
+        });
+        midEl.appendChild(costPrompt);
+      }
+
+      // NW link badge
+      if (h.nwAccount) {
+        const linkEl = document.createElement('div');
+        linkEl.className = 'holding-nw-link';
+        linkEl.textContent = '⇅ ' + h.nwAccount;
+        midEl.appendChild(linkEl);
+      }
+
+      // Right — value + delete
+      const rightEl = document.createElement('div');
+      rightEl.className = 'holding-right';
+
+      if (q && q.c > 0) {
+        const valEl = document.createElement('div');
+        valEl.className = 'holding-value';
+        valEl.textContent = fmtMoney(usdToChf(q.c) * h.shares);
+        rightEl.appendChild(valEl);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'holding-del';
+      delBtn.textContent = '×';
+      delBtn.title = 'Remove holding';
+      delBtn.addEventListener('click', () => {
+        if (!confirm('Remove ' + h.ticker + ' from holdings?')) return;
+        const updated = getHoldings();
+        updated.splice(idx, 1);
+        saveHoldings(updated);
+        renderHoldings();
+      });
+      rightEl.appendChild(delBtn);
+
+      card.appendChild(leftEl);
+      card.appendChild(midEl);
+      card.appendChild(rightEl);
+      listEl.appendChild(card);
+    });
+
+    renderSummary(holdings);
+  }
+
+  // ── inline field editing ──────────────────────────────────────────────────
+  function beginEdit(field, el, holdings, idx) {
+    if (el.querySelector('input')) return;
+    const cur = field === 'name'   ? (holdings[idx].name || holdings[idx].ticker)
+              : field === 'shares' ? holdings[idx].shares
+              : holdings[idx].costBasisUSD || '';
+
+    const input = document.createElement('input');
+    input.className = 'inline-edit';
+    input.type  = field === 'name' ? 'text' : 'number';
+    input.value = cur !== 0 ? cur : '';
+    input.placeholder = field === 'name' ? 'Name' : field === 'shares' ? 'Shares' : 'Cost/sh USD';
+    if (field === 'shares') { input.min = '0.0001'; input.step = '0.0001'; }
+    if (field === 'cost')   { input.min = '0'; input.step = '0.01'; }
+    input.style.width = field === 'name' ? '140px' : '90px';
+
+    el.textContent = '';
+    el.appendChild(input);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+
+    let saved = false;
+    function save() {
+      if (saved) return; saved = true;
+      const v = input.value.trim();
+      const updated = getHoldings();
+      if (field === 'name'   && v)              updated[idx].name         = v;
+      if (field === 'shares' && parseFloat(v) > 0) updated[idx].shares    = parseFloat(v);
+      if (field === 'cost')  { updated[idx].costBasisUSD = parseFloat(v) > 0 ? parseFloat(v) : 0; }
+      saveHoldings(updated);
+      renderHoldings();
+    }
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); save(); }
+      if (e.key === 'Escape') { saved = true; renderHoldings(); }
+    });
+    input.addEventListener('blur', save);
+  }
+
+  // ── fetch prices from proxy ───────────────────────────────────────────────
+  async function fetchPrices(tickers, withProfile) {
+    const url = '/api/stock-quote?symbols=' + encodeURIComponent(tickers.join(',')) +
+                (withProfile ? '&profile=true' : '');
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'HTTP ' + res.status);
+    }
+    const data = await res.json();
+    if (data.quotes) Object.assign(_prices, data.quotes);
+    return data.quotes || {};
+  }
+
+  // ── refresh ───────────────────────────────────────────────────────────────
+  window.__stockRefresh = async function () {
+    if (_busy) return;
+    _busy = true;
+    const btn = document.getElementById('refreshBtn');
+    if (btn) { btn.textContent = '↻…'; btn.disabled = true; btn.classList.add('active'); }
+    setError('');
+    try {
+      const holdings = getHoldings();
+      const tickers  = [...new Set(holdings.map(h => h.ticker))];
+      if (tickers.length) {
+        await fetchPrices(tickers, false);
+        lsSet(PRICES_KEY, _prices);
+        lsSet(LAST_TS_KEY, Date.now());
+      }
+      renderHoldings();
+      updateUpdatedLabel();
+    } catch (e) {
+      setError(e.message + (e.message.includes('FINNHUB') ? '' : ' — Check that FINNHUB_API_KEY is set in Vercel Dashboard → Settings → Environment Variables.'));
+    } finally {
+      _busy = false;
+      if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; btn.classList.remove('active'); }
+    }
+  };
+
+  // ── sync net worth ────────────────────────────────────────────────────────
+  window.__stockSyncNw = function () {
+    const holdings = getHoldings().filter(h => h.nwAccount && _prices[h.ticker]?.c > 0);
+    if (!holdings.length) { flashBtn('syncNwBtn', '⇅ No links', 2000); return; }
+
+    const totals = {};
+    holdings.forEach(h => {
+      totals[h.nwAccount] = (totals[h.nwAccount] || 0) + usdToChf(_prices[h.ticker].c) * h.shares;
+    });
+
+    const items = getStocksNwItems();
+    let n = 0;
+    Object.entries(totals).forEach(([name, chf]) => {
+      const item = items.find(it => it.name === name);
+      if (item) { item.amount = chf; n++; }
+    });
+    if (n) {
+      localStorage.setItem('nw:stocks', JSON.stringify(items));
+      window.dispatchEvent(new Event('storage'));
+    }
+    flashBtn('syncNwBtn', '✓ Synced ' + n + (n === 1 ? ' account' : ' accounts'), 2500);
+  };
+
+  function flashBtn(id, label, ms) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = label;
+    setTimeout(() => { btn.textContent = orig; }, ms);
+  }
+
+  // ── add holding ───────────────────────────────────────────────────────────
+  window.__stockAdd = async function () {
+    const tEl = document.getElementById('hTicker');
+    const sEl = document.getElementById('hShares');
+    const cEl = document.getElementById('hCost');
+    const aEl = document.getElementById('hAccount');
+
+    const ticker  = (tEl.value || '').trim().toUpperCase();
+    const shares  = parseFloat(sEl.value);
+    const costUSD = parseFloat(cEl.value) || 0;
+    const nwAcct  = (aEl.value || '').trim();
+
+    if (!ticker)                                 { return setFeedback('Enter a ticker symbol',    'var(--warning)'); }
+    if (!/^[A-Z0-9.\-^]{1,12}$/.test(ticker))   { return setFeedback('Invalid ticker format',   'var(--warning)'); }
+    if (isNaN(shares) || shares <= 0)            { return setFeedback('Enter number of shares',  'var(--warning)'); }
+
+    setFeedback('Looking up ' + ticker + '…', 'var(--text-tertiary)');
+
+    let name = ticker;
+    try {
+      const quotes = await fetchPrices([ticker], true); // profile=true for company name
+      if (quotes[ticker] && quotes[ticker].name) name = quotes[ticker].name;
+      lsSet(PRICES_KEY, _prices);
+      lsSet(LAST_TS_KEY, Date.now());
+    } catch (e) {
+      setFeedback('Price lookup failed — holding added without live price', 'var(--warning)');
+    }
+
+    const holdings = getHoldings();
+    holdings.push({ ticker, name, shares, costBasisUSD: costUSD, nwAccount: nwAcct });
+    saveHoldings(holdings);
+
+    tEl.value = ''; sEl.value = ''; cEl.value = ''; aEl.value = '';
+    setFeedback('✓ Added ' + fmtShares(shares) + ' × ' + ticker + (name !== ticker ? ' — ' + name : ''), 'var(--success)');
+    updateUpdatedLabel();
+    renderHoldings();
+  };
+
+  // ── feedback helpers ──────────────────────────────────────────────────────
+  function setFeedback(msg, color) {
+    const el = document.getElementById('addFeedback');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || 'var(--success)';
+    if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+
+  function setError(msg) {
+    const el = document.getElementById('portError');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function updateUpdatedLabel() {
+    const el = document.getElementById('portUpdated');
+    if (!el) return;
+    const ts = lsGet(LAST_TS_KEY);
+    if (!ts) { el.textContent = 'Prices not yet loaded'; return; }
+    const s = Math.round((Date.now() - ts) / 1000);
+    if (s < 60)         el.textContent = 'Updated ' + s + 's ago';
+    else if (s < 3600)  el.textContent = 'Updated ' + Math.round(s / 60) + 'm ago';
+    else                el.textContent = 'Updated ' + new Date(ts).toLocaleTimeString();
+  }
+
+  // ── currency selector ─────────────────────────────────────────────────────
+  const currSel = document.getElementById('stockCurrSel');
+  if (currSel) {
+    _currency      = lsGet(CURRENCY_KEY) || 'CHF';
+    currSel.value  = _currency;
+    currSel.addEventListener('change', () => {
+      _currency = currSel.value;
+      lsSet(CURRENCY_KEY, _currency);
+      renderHoldings();
+    });
+  }
+
+  // ── boot ──────────────────────────────────────────────────────────────────
+  async function boot() {
+    _prices = lsGet(PRICES_KEY) || {};
+    populateAccountSelect();
+
+    const holdings = getHoldings();
+    if (holdings.length) renderHoldings(); // show cached prices immediately
+
+    await loadRates();
+
+    const lastTs = lsGet(LAST_TS_KEY);
+    const stale  = !lastTs || (Date.now() - lastTs) > STALE_MS;
+    if (holdings.length && stale) {
+      await window.__stockRefresh();
+    } else {
+      renderHoldings();
+    }
+
+    updateUpdatedLabel();
+    setInterval(updateUpdatedLabel, 30000);
+
+    window.addEventListener('storage', e => {
+      if (e.key === 'nw:stocks' || e.key === null) populateAccountSelect();
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
