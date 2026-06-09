@@ -4539,6 +4539,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   (function stBoot() {
     _stPrices = storeGet(ST_PRICE_KEY) || {};
+    // If stocks:brokerages is empty but nw:stocks has data, recover brokerage names.
+    // This handles the case where stocks: data was wiped by a sync edge-case.
+    if (!stGetBrokerages().length) {
+      const nwItems = storeGet('nw:stocks') || [];
+      if (nwItems.length) {
+        stSaveBrokerages(nwItems.map(it => it.name));
+      }
+    }
     stRenderBrokerages();
     stPopulateAcctSel();
     stRenderHoldings();

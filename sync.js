@@ -18,6 +18,10 @@
     if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) return;
 
     let supa = null, pushTimer = null, suppressSync = false, lastSyncedJson = null;
+    // Keys that have ever been confirmed in the remote. We only delete LOCAL keys
+    // that were previously in the remote — this prevents wiping data for prefixes
+    // that were added to syncedPrefixes but never pushed yet.
+    const _remoteKnown = new Set();
 
     function matches(k) {
       if (!k) return false;
@@ -56,6 +60,8 @@
     };
     function applyRemote(remote) {
       if (!remote || typeof remote !== 'object') return false;
+      // Learn which keys the remote knows about, then apply changes
+      Object.keys(remote).forEach(k => { if (matches(k)) _remoteKnown.add(k); });
       suppressSync = true;
       let changed = false;
       try {
@@ -66,7 +72,9 @@
           if (local !== incoming) { try { origSet(k, incoming); changed = true; } catch (e) {} }
         }
         for (const k of listAllKeys()) {
-          if (!(k in remote)) { try { origRemove(k); changed = true; } catch (e) {} }
+          // Only delete a local key if the remote has ever acknowledged it.
+          // This prevents wiping local data for newly-added syncedPrefixes.
+          if (!(k in remote) && _remoteKnown.has(k)) { try { origRemove(k); changed = true; } catch (e) {} }
         }
       } finally { suppressSync = false; }
       if (changed && typeof onApplied === 'function') { try { onApplied(); } catch (e) {} }
@@ -82,7 +90,7 @@
           { key: appKey, data: state, updated_at: new Date().toISOString() },
           { onConflict: 'key' }
         );
-        if (!error) lastSyncedJson = json;
+        if (!error) { lastSyncedJson = json; Object.keys(state).forEach(k => _remoteKnown.add(k)); }
       } catch (e) {}
     }
     function schedulePush() { clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 250); }

@@ -382,7 +382,6 @@ select.form-input { cursor: pointer; }
   // ── API fetch ──────────────────────────────────────────────
   async function gFetch(url, opts = {}) {
     let tok = getToken();
-    console.log('[CAL-DBG] gFetch start, token present:', !!tok, url);
     if (!tok) { tok = await refreshAccessToken(); if (!tok) throw new Error('not_authed'); }
     const doFetch = t => {
       const fo = { method: opts.method || 'GET', headers: { Authorization: 'Bearer ' + t, Accept: 'application/json' } };
@@ -390,24 +389,17 @@ select.form-input { cursor: pointer; }
       return fetch(url, fo);
     };
     let r = await doFetch(tok);
-    console.log('[CAL-DBG] gFetch response status:', r.status, url);
     if (r.status === 401) {
       tok = await refreshAccessToken();
       if (!tok) throw new Error('token_expired');
       r = await doFetch(tok);
     }
     if (r.status === 403) {
-      const body403 = await r.text().catch(() => '');
-      console.error('[CAL-DBG] 403 scope/permissions error:', body403, url);
       localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(REFRESH_KEY); localStorage.removeItem(TOKEN_EXP_KEY);
       throw new Error('scope_error');
     }
-    if (r.status === 204 || r.status === 200 && r.headers.get('content-length') === '0') return {};
-    if (!r.ok) {
-      const bodyErr = await r.text().catch(() => '');
-      console.error('[CAL-DBG] API error', r.status, url, bodyErr);
-      throw new Error('api_' + r.status);
-    }
+    if (r.status === 204 || (r.status === 200 && r.headers.get('content-length') === '0')) return {};
+    if (!r.ok) throw new Error('api_' + r.status);
     return r.json();
   }
 
@@ -416,13 +408,11 @@ select.form-input { cursor: pointer; }
 
   async function loadCalendars() {
     const data = await gFetch(CAL_BASE + '/calendarList');
-    console.log('[CAL-DBG] calendarList response:', data);
     calendarMap = {};
     for (const cal of (data.items || [])) {
       const color = cal.backgroundColor || GCOLOR[cal.colorId] || '#1A73E8';
       calendarMap[cal.id] = { name: cal.summary, color, primary: cal.primary };
     }
-    console.log('[CAL-DBG] calendars found:', Object.keys(calendarMap));
     return Object.keys(calendarMap);
   }
 
@@ -437,14 +427,8 @@ select.form-input { cursor: pointer; }
     const results = await Promise.allSettled(
       calIds.map(id => gFetch(`${CAL_BASE}/calendars/${encodeURIComponent(id)}/events?${params}`))
     );
-    console.log('[CAL-DBG] event fetch results:', results.map((r,i) => ({
-      cal: calIds[i], status: r.status,
-      count: r.status === 'fulfilled' ? (r.value.items||[]).length : undefined,
-      error: r.status === 'rejected' ? String(r.reason) : undefined,
-    })));
     const events = [];
     results.forEach((r, i) => {
-      if (r.status === 'rejected') console.error('[CAL-DBG] event fetch failed for', calIds[i], r.reason);
       if (r.status === 'fulfilled' && r.value.items) {
         r.value.items.forEach(ev => { ev._calId = calIds[i]; events.push(ev); });
       }
@@ -586,14 +570,33 @@ select.form-input { cursor: pointer; }
     if (rb) rb.classList.add('spinning');
     try {
       const events = await loadEvents();
-      console.log('[CAL-DBG] total events to render:', events.length);
       renderAgenda(events);
       populateCalSelect();
       markUpdated();
     } catch (e) {
-      console.error('[CAL-DBG] refreshData caught error:', e.message, e);
-      if (['not_authed','token_expired','scope_error'].includes(e.message)) showNotConnected();
-      else console.error('Calendar load error:', e);
+      if (['not_authed','token_expired','scope_error'].includes(e.message)) {
+        showNotConnected();
+      } else {
+        // Clear the loading skeleton and show an inline error so it doesn't spin forever
+        const agenda = document.getElementById('calAgenda');
+        if (agenda) {
+          agenda.innerHTML =
+            '<div class="cal-empty" style="color:var(--danger,#FF6B6B)">' +
+            'Could not load events: ' + (e.message || 'unknown error') + '<br>' +
+            '<button id="calRetryBtn" style="margin-top:12px;padding:8px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:999px;color:inherit;font-family:inherit;font-size:12px;cursor:pointer">↻ Retry</button> ' +
+            '<button id="calReconnectBtn" style="margin-top:12px;padding:8px 18px;background:rgba(255,107,107,0.10);border:1px solid rgba(255,107,107,0.25);border-radius:999px;color:var(--danger,#FF6B6B);font-family:inherit;font-size:12px;cursor:pointer">Reconnect Google</button>' +
+            '</div>';
+          const retryBtn = document.getElementById('calRetryBtn');
+          if (retryBtn) retryBtn.addEventListener('click', refreshData);
+          const reconnectBtn = document.getElementById('calReconnectBtn');
+          if (reconnectBtn) reconnectBtn.addEventListener('click', () => {
+            localStorage.removeItem('google_access_token');
+            localStorage.removeItem('google_refresh_token');
+            localStorage.removeItem('google_token_exp');
+            showNotConnected();
+          });
+        }
+      }
     } finally {
       if (rb) rb.classList.remove('spinning');
     }
