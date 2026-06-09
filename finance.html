@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 <style>
 :root {
   --bg: #0A0A0B;
@@ -1816,6 +1817,97 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @media (max-width: 600px) {
   .sub-auto-toggle { width: 100%; justify-content: space-between; padding: 12px 14px; }
 }
+
+/* ===== Credit Cards tab ===== */
+.cc-inner-tabs { display:flex; gap:4px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
+.cc-inner-tabs::-webkit-scrollbar { display:none; }
+.cc-inner-tab { flex:0 0 auto; padding:6px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:999px; color:var(--text-tertiary); font-family:var(--font); font-size:11px; font-weight:700; letter-spacing:0.04em; cursor:pointer; white-space:nowrap; -webkit-tap-highlight-color:transparent; transition:background 0.15s,color 0.15s; }
+.cc-inner-tab.active { background:rgba(255,107,107,0.12); border-color:rgba(255,107,107,0.3); color:var(--danger); }
+.cc-summary-strip { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.cc-stat { background:rgba(255,255,255,0.03); border-radius:var(--radius-md); padding:10px 8px; text-align:center; }
+.cc-stat-val { font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:2px; }
+.cc-stat-lbl { font-size:9px; color:var(--text-quaternary); text-transform:uppercase; letter-spacing:0.06em; }
+.cc-stat-val.cc-danger { color:var(--danger); }
+.cc-stat-val.cc-warning { color:var(--warning); }
+.cc-stat-val.cc-ok { color:var(--success); }
+.cc-card-item { background:rgba(255,255,255,0.03); border-radius:var(--radius-md); padding:12px; margin-bottom:8px; border-left:3px solid var(--cc-c,#888); }
+.cc-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+.cc-card-name { font-size:13px; font-weight:600; color:var(--text-primary); cursor:pointer; }
+.cc-card-name:hover { color:var(--accent); }
+.cc-card-del { background:none; border:none; color:var(--text-quaternary); cursor:pointer; font-size:16px; padding:0 2px; line-height:1; -webkit-tap-highlight-color:transparent; }
+.cc-card-del:hover { color:var(--danger); }
+.cc-bal-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.cc-bal { font-family:var(--font-mono); font-size:17px; font-weight:700; cursor:pointer; }
+.cc-bal:hover { opacity:0.8; }
+.cc-limit-lbl { font-size:11px; color:var(--text-tertiary); }
+.cc-util-wrap { height:4px; background:rgba(255,255,255,0.07); border-radius:999px; margin-bottom:7px; overflow:hidden; }
+.cc-util-bar { height:100%; border-radius:999px; transition:width 0.4s; }
+.cc-util-bar.cc-ok { background:var(--success); }
+.cc-util-bar.cc-warning { background:var(--warning); }
+.cc-util-bar.cc-danger { background:var(--danger); }
+.cc-meta-row { display:flex; gap:8px; flex-wrap:wrap; }
+.cc-chip { font-size:9px; color:var(--text-tertiary); background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:999px; }
+.cc-chip strong { color:var(--text-secondary); }
+.cc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.cc-form-grid.g3 { grid-template-columns:1fr 1fr 1fr; }
+.cc-form-lbl { font-size:10px; color:var(--text-tertiary); margin-bottom:3px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; }
+.cc-input { width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:var(--radius-sm); color:var(--text-primary); font-family:var(--font); font-size:13px; padding:7px 9px; outline:none; transition:border-color 0.15s; }
+.cc-input:focus { border-color:rgba(255,107,107,0.35); }
+.cc-color-row { display:flex; gap:6px; margin-top:4px; flex-wrap:wrap; }
+.cc-dot { width:20px; height:20px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:border-color 0.15s; flex-shrink:0; }
+.cc-dot.sel { border-color:var(--text-primary); }
+.cc-add-btn { width:100%; padding:9px; background:rgba(255,107,107,0.10); border:1px solid rgba(255,107,107,0.22); border-radius:var(--radius-sm); color:var(--danger); font-family:var(--font); font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; margin-top:10px; transition:background 0.15s; }
+.cc-add-btn:hover { background:rgba(255,107,107,0.18); }
+.cc-feedback { font-size:11px; min-height:16px; margin-top:5px; }
+.cc-feedback.ok { color:var(--success); }
+.cc-feedback.err { color:var(--danger); }
+.liability-total { text-align:center; padding:16px 0 12px; }
+.liability-amount { font-family:var(--font-mono); font-size:32px; font-weight:700; color:var(--danger); margin-bottom:3px; }
+.liability-sub { font-size:11px; color:var(--text-tertiary); }
+.cc-sync-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:12px; }
+.cc-toggle-lbl { font-size:12px; color:var(--text-secondary); }
+.cc-toggle-sub { font-size:10px; color:var(--text-quaternary); margin-top:2px; }
+.cc-tog { position:relative; width:40px; height:24px; flex-shrink:0; }
+.cc-tog input { opacity:0; width:0; height:0; position:absolute; }
+.cc-tog-slider { position:absolute; inset:0; background:rgba(255,255,255,0.1); border-radius:999px; cursor:pointer; transition:background 0.2s; }
+.cc-tog-slider::before { content:''; position:absolute; left:2px; top:2px; width:20px; height:20px; background:#fff; border-radius:50%; transition:transform 0.2s; }
+.cc-tog input:checked + .cc-tog-slider { background:var(--success); }
+.cc-tog input:checked + .cc-tog-slider::before { transform:translateX(16px); }
+.cc-apr-row { display:flex; justify-content:space-between; align-items:center; padding:7px 8px; background:rgba(255,255,255,0.03); border-radius:var(--radius-sm); margin-bottom:6px; }
+.cc-apr-name { font-size:12px; color:var(--text-secondary); }
+.cc-apr-right { text-align:right; }
+.cc-apr-bal { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--text-primary); }
+.cc-apr-detail { font-size:10px; color:var(--text-quaternary); }
+.cc-monthly-cost { font-size:11px; color:var(--warning); margin-top:8px; text-align:center; }
+.rw-card-row { display:flex; justify-content:space-between; align-items:center; padding:9px 10px; background:rgba(255,255,255,0.03); border-left:3px solid var(--cc-c,#888); border-radius:var(--radius-sm); margin-bottom:7px; }
+.rw-card-name { font-size:12px; font-weight:600; color:var(--text-primary); }
+.rw-card-type { font-size:10px; color:var(--text-tertiary); margin-top:2px; }
+.rw-card-earned { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--success); text-align:right; }
+.rw-card-rate { font-size:10px; color:var(--text-quaternary); }
+.rw-log-row { display:flex; justify-content:space-between; align-items:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:11px; }
+.rw-log-left { color:var(--text-secondary); }
+.rw-log-right { font-family:var(--font-mono); color:var(--success); font-weight:600; }
+.rw-log-date { font-size:10px; color:var(--text-quaternary); margin-left:6px; }
+.opt-cat-row { display:grid; grid-template-columns:110px 1fr auto; gap:8px; align-items:center; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.opt-cat-name { font-size:12px; color:var(--text-secondary); }
+.opt-best { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.opt-cdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.opt-cname { font-size:11px; color:var(--text-primary); font-weight:600; }
+.opt-rate-badge { font-size:10px; color:var(--success); font-family:var(--font-mono); font-weight:700; background:rgba(107,227,164,0.1); padding:1px 5px; border-radius:999px; }
+.opt-empty-lbl { font-size:11px; color:var(--text-quaternary); font-style:italic; }
+.opt-edit-btn { font-size:11px; color:var(--text-quaternary); background:none; border:none; cursor:pointer; padding:2px 5px; -webkit-tap-highlight-color:transparent; }
+.opt-edit-btn:hover { color:var(--text-secondary); }
+.plaid-connect-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font); font-size:13px; font-weight:600; cursor:pointer; transition:background 0.15s; -webkit-tap-highlight-color:transparent; }
+.plaid-connect-btn:hover { background:rgba(255,255,255,0.09); }
+.plaid-inst-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:var(--radius-md); margin-bottom:7px; }
+.plaid-inst-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+.plaid-inst-sub { font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+.plaid-inst-del { background:none; border:none; color:var(--text-quaternary); cursor:pointer; font-size:16px; -webkit-tap-highlight-color:transparent; }
+.plaid-inst-del:hover { color:var(--danger); }
+.plaid-sync-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:9px; background:rgba(107,227,164,0.08); border:1px solid rgba(107,227,164,0.18); border-radius:var(--radius-sm); color:var(--success); font-family:var(--font); font-size:11px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; margin-top:10px; transition:background 0.15s; }
+.plaid-sync-btn:hover { background:rgba(107,227,164,0.14); }
+.plaid-status { font-size:11px; color:var(--text-tertiary); text-align:center; margin-top:6px; }
+.plaid-note { font-size:10px; color:var(--text-quaternary); text-align:center; margin-top:4px; font-style:italic; }
 </style>
 </head>
 <body>
@@ -2235,6 +2327,160 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </div>
 </div>
 
+<!-- ===== CREDIT CARDS ===== -->
+<div class="section" data-section="cc">
+  <div class="section-title"><span class="section-title-text">CREDIT CARDS</span></div>
+
+  <!-- Inner sub-tab bar -->
+  <div class="cc-inner-tabs" id="ccInnerTabs">
+    <button class="cc-inner-tab active" data-cctab="balances">💳 Balances</button>
+    <button class="cc-inner-tab" data-cctab="liability">📉 Liability</button>
+    <button class="cc-inner-tab" data-cctab="rewards">🎁 Rewards</button>
+    <button class="cc-inner-tab" data-cctab="optimizer">⚡ Optimizer</button>
+    <button class="cc-inner-tab" data-cctab="plaid">🔗 Plaid</button>
+  </div>
+
+  <!-- BALANCES sub-panel -->
+  <div data-ccsection="balances">
+    <div class="card" style="background:linear-gradient(135deg,rgba(255,107,107,0.06),rgba(224,118,88,0.03));border:1px solid rgba(255,107,107,0.10)">
+      <div class="cc-summary-strip">
+        <div class="cc-stat"><div class="cc-stat-val cc-danger" id="ccTotalBal">$0</div><div class="cc-stat-lbl">Total Debt</div></div>
+        <div class="cc-stat"><div class="cc-stat-val" id="ccTotalAvail">$0</div><div class="cc-stat-lbl">Available</div></div>
+        <div class="cc-stat"><div class="cc-stat-val" id="ccUtilPct">0%</div><div class="cc-stat-lbl">Utilization</div></div>
+      </div>
+      <div id="ccCardList"></div>
+      <div id="ccListEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:14px 0;display:none">No cards yet — add one below</div>
+    </div>
+    <div class="card">
+      <div class="label">Add Card</div>
+      <div style="margin-bottom:8px">
+        <div class="cc-form-lbl">Card Name</div>
+        <input class="cc-input" type="text" id="ccName" placeholder="e.g. Chase Sapphire" />
+      </div>
+      <div class="cc-form-grid">
+        <div><div class="cc-form-lbl">Balance</div><input class="cc-input" type="number" id="ccBalance" placeholder="0.00" step="0.01" min="0" /></div>
+        <div><div class="cc-form-lbl">Credit Limit</div><input class="cc-input" type="number" id="ccLimit" placeholder="0.00" step="0.01" min="0" /></div>
+      </div>
+      <div class="cc-form-grid g3">
+        <div><div class="cc-form-lbl">APR %</div><input class="cc-input" type="number" id="ccApr" placeholder="24.99" step="0.01" min="0" max="100" /></div>
+        <div><div class="cc-form-lbl">Due Day</div><input class="cc-input" type="number" id="ccDueDay" placeholder="15" min="1" max="31" /></div>
+        <div><div class="cc-form-lbl">Min Payment</div><input class="cc-input" type="number" id="ccMinPmt" placeholder="25" step="0.01" min="0" /></div>
+      </div>
+      <div class="cc-form-grid" style="margin-top:8px">
+        <div>
+          <div class="cc-form-lbl">Reward Type</div>
+          <select class="cc-input" id="ccRewardType">
+            <option value="none">None</option>
+            <option value="cashback">Cash Back %</option>
+            <option value="points">Points (per $1)</option>
+            <option value="miles">Miles (per $1)</option>
+          </select>
+        </div>
+        <div><div class="cc-form-lbl">Base Rate</div><input class="cc-input" type="number" id="ccRewardBase" placeholder="1.5" step="0.01" min="0" /></div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="cc-form-lbl">Color</div>
+        <div class="cc-color-row" id="ccColorPicker"></div>
+      </div>
+      <button class="cc-add-btn" onclick="window.__ccAdd()">+ Add Card</button>
+      <div class="cc-feedback" id="ccFeedback"></div>
+    </div>
+  </div>
+
+  <!-- LIABILITY sub-panel -->
+  <div data-ccsection="liability" style="display:none">
+    <div class="card">
+      <div class="liability-total">
+        <div class="liability-amount" id="liabilityAmt">$0</div>
+        <div class="liability-sub">Total credit card debt</div>
+      </div>
+      <div class="cc-sync-row">
+        <div>
+          <div class="cc-toggle-lbl">Sync to Net Worth</div>
+          <div class="cc-toggle-sub">Writes debt as a negative entry in Other Assets</div>
+        </div>
+        <label class="cc-tog">
+          <input type="checkbox" id="ccNwSync" onchange="window.__ccToggleSync()" />
+          <span class="cc-tog-slider"></span>
+        </label>
+      </div>
+      <div class="label" style="margin-top:12px">By APR — Pay These First</div>
+      <div id="ccAprList"></div>
+      <div class="cc-monthly-cost" id="ccMonthlyCost"></div>
+    </div>
+  </div>
+
+  <!-- REWARDS sub-panel -->
+  <div data-ccsection="rewards" style="display:none">
+    <div class="card">
+      <div class="label">Cards Summary</div>
+      <div id="rwCardSummary"></div>
+      <div id="rwCardsEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:10px 0;display:none">Add cards in Balances</div>
+    </div>
+    <div class="card">
+      <div class="label">Log Reward</div>
+      <div class="cc-form-grid">
+        <div><div class="cc-form-lbl">Card</div><select class="cc-input" id="rwCardSel"></select></div>
+        <div><div class="cc-form-lbl">Amount Earned</div><input class="cc-input" type="number" id="rwAmount" placeholder="0.00" step="0.01" min="0" /></div>
+      </div>
+      <div class="cc-form-grid">
+        <div>
+          <div class="cc-form-lbl">Category</div>
+          <select class="cc-input" id="rwCat">
+            <option value="dining">Dining</option>
+            <option value="travel">Travel</option>
+            <option value="gas">Gas</option>
+            <option value="grocery">Grocery</option>
+            <option value="shopping">Shopping</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div><div class="cc-form-lbl">Note (optional)</div><input class="cc-input" type="text" id="rwNote" placeholder="e.g. United flight" /></div>
+      </div>
+      <button class="cc-add-btn" onclick="window.__ccLogReward()">Log Reward</button>
+      <div class="cc-feedback" id="rwFeedback"></div>
+    </div>
+    <div class="card">
+      <div class="label">Reward History</div>
+      <div id="rwHistory"></div>
+      <div id="rwHistEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:10px 0;display:none">No rewards logged yet</div>
+    </div>
+  </div>
+
+  <!-- OPTIMIZER sub-panel -->
+  <div data-ccsection="optimizer" style="display:none">
+    <div class="card">
+      <div class="label">Best Card per Category</div>
+      <div style="font-size:11px;color:var(--text-quaternary);margin-bottom:12px">Tap Edit to set per-card rates for a category</div>
+      <div id="optCatList"></div>
+    </div>
+    <div class="card" id="optRatesCard" style="display:none">
+      <div class="label" id="optRatesTitle">Rates</div>
+      <div id="optRatesList"></div>
+      <button class="quick-add-btn" style="margin-top:10px;width:100%;font-size:12px" onclick="window.__optClose()">Done</button>
+    </div>
+  </div>
+
+  <!-- PLAID sub-panel -->
+  <div data-ccsection="plaid" style="display:none">
+    <div class="card">
+      <div class="label">Connected Accounts</div>
+      <div id="plaidInstList"></div>
+      <div id="plaidInstEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:10px 0;display:none">No accounts connected</div>
+      <button class="plaid-connect-btn" style="margin-top:10px" onclick="window.__plaidOpen()">🔗 Connect Account</button>
+      <div class="plaid-note">Sandbox mode — add PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV to Vercel env vars</div>
+      <button class="plaid-sync-btn" id="plaidSyncBalBtn" style="display:none" onclick="window.__plaidSync()">↻ Sync Balances</button>
+      <div class="plaid-status" id="plaidStatusMsg"></div>
+    </div>
+    <div class="card">
+      <div class="label">Recent Transactions</div>
+      <div id="plaidTxList"></div>
+      <div id="plaidTxEmpty" style="font-size:12px;color:var(--text-quaternary);text-align:center;padding:10px 0">Connect an account to view transactions</div>
+      <button class="quick-add-btn" id="plaidTxBtn" style="display:none;margin-top:10px;width:100%;font-size:12px" onclick="window.__plaidFetchTx()">Load Transactions</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== BOTTOM TAB BAR ===== -->
 <nav class="bottom-tabs" id="bottomTabs" aria-label="Sections">
   <button class="bot-tab active" data-tab="net">
@@ -2256,6 +2502,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <button class="bot-tab" data-tab="stocks">
     <span class="bot-tab-icon">📈</span>
     <span class="bot-tab-label">Stocks</span>
+  </button>
+  <button class="bot-tab" data-tab="cc">
+    <span class="bot-tab-icon">💳</span>
+    <span class="bot-tab-label">Cards</span>
   </button>
 </nav>
 
@@ -2306,7 +2556,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   tabs.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
   const savedTab = storeGet(TAB_KEY);
-  setActiveTab(savedTab && ['net','subs','incoming','wish','stocks'].includes(savedTab) ? savedTab : 'net');
+  setActiveTab(savedTab && ['net','subs','incoming','wish','stocks','cc'].includes(savedTab) ? savedTab : 'net');
 
   // ============================================================
   // NET WORTH (copied from the main dashboard, verbatim logic)
@@ -4493,6 +4743,428 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     showIncomeFeedback('✓ Logged ' + fmtMoney(deposited) + ' from ' + src);
   };
 
+  // ============================================================
+  // CREDIT CARDS TAB
+  // ============================================================
+  const CC_KEY      = 'cc:cards';
+  const CC_RW_KEY   = 'cc:rewards_log';
+  const CC_OPT_KEY  = 'cc:optimizer_rates';
+  const CC_PLAID_KEY= 'cc:plaid_items';
+  const CC_DEV_KEY  = 'cc:device_id';
+  const CC_SYNC_KEY = 'cc:nw_sync';
+  const CC_TAB_KEY  = 'cc:inner_tab';
+  const CC_COLORS   = ['#FF6B6B','#F2C063','#6BE3A4','#7DD3FC','#B794F4','#E07658','#94A3B8'];
+  const OPT_CATS    = [
+    {key:'dining',label:'Dining',emoji:'🍽️'},
+    {key:'travel',label:'Travel',emoji:'✈️'},
+    {key:'gas',label:'Gas',emoji:'⛽'},
+    {key:'grocery',label:'Grocery',emoji:'🛒'},
+    {key:'shopping',label:'Shopping',emoji:'🛍️'},
+    {key:'other',label:'Other',emoji:'💳'}
+  ];
+
+  let _ccColor = CC_COLORS[0];
+
+  function ccGetCards()   { return storeGet(CC_KEY)       || []; }
+  function ccSaveCards(c) { storeSet(CC_KEY, c); }
+  function ccGetRw()      { return storeGet(CC_RW_KEY)    || []; }
+  function ccSaveRw(r)    { storeSet(CC_RW_KEY, r); }
+  function ccGetOpt()     { return storeGet(CC_OPT_KEY)   || {}; }
+  function ccSaveOpt(o)   { storeSet(CC_OPT_KEY, o); }
+  function ccGetPlaid()   { return storeGet(CC_PLAID_KEY) || []; }
+  function ccSavePlaid(p) { storeSet(CC_PLAID_KEY, p); }
+  function ccGetDevId() {
+    let id = storeGet(CC_DEV_KEY);
+    if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36)); storeSet(CC_DEV_KEY, id); }
+    return id;
+  }
+  function ccFmt(n) { return '$'+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  // ── Inner sub-tab system ──────────────────────────────────────
+  const CC_INNER_TABS = ['balances','liability','rewards','optimizer','plaid'];
+  function ccSetInnerTab(name) {
+    if (!CC_INNER_TABS.includes(name)) name = 'balances';
+    document.querySelectorAll('.cc-inner-tab').forEach(b => b.classList.toggle('active', b.dataset.cctab === name));
+    document.querySelectorAll('[data-ccsection]').forEach(s => { s.style.display = s.dataset.ccsection === name ? '' : 'none'; });
+    storeSet(CC_TAB_KEY, name);
+    if (name === 'liability') ccRenderLiability();
+    if (name === 'rewards')   { ccRenderRewardSummary(); ccRenderRwHistory(); ccPopulateRwSel(); }
+    if (name === 'optimizer') ccRenderOptimizer();
+    if (name === 'plaid')     ccRenderPlaid();
+  }
+  document.querySelectorAll('.cc-inner-tab').forEach(b => b.addEventListener('click', () => ccSetInnerTab(b.dataset.cctab)));
+
+  // ── Color picker ─────────────────────────────────────────────
+  (function() {
+    const picker = document.getElementById('ccColorPicker'); if (!picker) return;
+    CC_COLORS.forEach(c => {
+      const d = document.createElement('div');
+      d.className = 'cc-dot' + (c === _ccColor ? ' sel' : '');
+      d.style.background = c;
+      d.addEventListener('click', () => {
+        _ccColor = c;
+        picker.querySelectorAll('.cc-dot').forEach(x => x.classList.toggle('sel', x.style.background===c||x.style.backgroundColor===c));
+      });
+      picker.appendChild(d);
+    });
+  })();
+
+  // ── Render Balances ───────────────────────────────────────────
+  function ccRenderCards() {
+    const cards = ccGetCards();
+    const list  = document.getElementById('ccCardList');
+    const empty = document.getElementById('ccListEmpty');
+    if (!list) return;
+    list.innerHTML = '';
+    let totBal = 0, totLim = 0;
+    cards.forEach((c, i) => {
+      totBal += Number(c.balance)||0;
+      totLim += Number(c.limit)||0;
+      const util = c.limit > 0 ? Math.min((c.balance/c.limit)*100,100) : 0;
+      const ucls = util < 30 ? 'cc-ok' : util < 70 ? 'cc-warning' : 'cc-danger';
+      const item = document.createElement('div');
+      item.className = 'cc-card-item';
+      item.style.setProperty('--cc-c', c.color||'#888');
+      item.innerHTML =
+        '<div class="cc-card-top">' +
+          '<span class="cc-card-name" data-ci="'+i+'">' + escapeHtml(c.name) + '</span>' +
+          '<button class="cc-card-del" onclick="window.__ccDel('+i+')">×</button>' +
+        '</div>' +
+        '<div class="cc-bal-row">' +
+          '<span class="cc-bal" data-bi="'+i+'" style="color:'+(c.color||'var(--danger)')+'">'+ccFmt(c.balance)+'</span>' +
+          '<span class="cc-limit-lbl">of '+ccFmt(c.limit)+' limit</span>' +
+        '</div>' +
+        '<div class="cc-util-wrap"><div class="cc-util-bar '+ucls+'" style="width:'+util.toFixed(1)+'%"></div></div>' +
+        '<div class="cc-meta-row">' +
+          (c.apr    ? '<span class="cc-chip"><strong>'+c.apr+'%</strong> APR</span>' : '') +
+          (c.dueDay ? '<span class="cc-chip">Due <strong>day '+c.dueDay+'</strong></span>' : '') +
+          (c.minPmt ? '<span class="cc-chip">Min <strong>'+ccFmt(c.minPmt)+'</strong></span>' : '') +
+          (c.rewardType&&c.rewardType!=='none' ? '<span class="cc-chip"><strong>'+(c.rewardBase||0)+(c.rewardType==='cashback'?'%':'x')+'</strong> '+c.rewardType+'</span>' : '') +
+        '</div>';
+      list.appendChild(item);
+    });
+    list.querySelectorAll('.cc-card-name').forEach(el => {
+      el.addEventListener('click', () => ccBeginNameEdit(el, parseInt(el.dataset.ci)));
+    });
+    list.querySelectorAll('.cc-bal').forEach(el => {
+      el.addEventListener('click', () => ccBeginBalEdit(el, parseInt(el.dataset.bi)));
+    });
+    const avail = Math.max(0, totLim - totBal);
+    const util  = totLim > 0 ? (totBal/totLim*100) : 0;
+    const uel = document.getElementById('ccUtilPct');
+    if (uel) { uel.textContent = util.toFixed(1)+'%'; uel.className='cc-stat-val '+(util<30?'cc-ok':util<70?'cc-warning':'cc-danger'); }
+    const bel = document.getElementById('ccTotalBal'); if (bel) bel.textContent = ccFmt(totBal);
+    const ael = document.getElementById('ccTotalAvail'); if (ael) ael.textContent = ccFmt(avail);
+    if (empty) empty.style.display = cards.length ? 'none' : '';
+  }
+
+  function ccBeginNameEdit(el, idx) {
+    if (el.querySelector('input')) return;
+    const cards = ccGetCards();
+    const inp = document.createElement('input'); inp.type='text'; inp.value=cards[idx].name||'';
+    inp.style.cssText='background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:var(--text-primary);font-family:var(--font);font-size:13px;font-weight:600;border-radius:4px;padding:2px 6px;width:140px;outline:none;';
+    el.textContent=''; el.appendChild(inp); inp.focus(); inp.select();
+    let saved=false;
+    function save(){if(saved)return;saved=true;const v=inp.value.trim();if(v){cards[idx].name=v;ccSaveCards(cards);}ccRenderCards();}
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}else if(e.key==='Escape'){saved=true;ccRenderCards();}});
+    inp.addEventListener('blur',save);
+  }
+
+  function ccBeginBalEdit(el, idx) {
+    if (el.querySelector('input')) return;
+    const cards = ccGetCards();
+    const inp = document.createElement('input'); inp.type='number'; inp.step='0.01'; inp.min='0'; inp.value=String(cards[idx].balance||0);
+    inp.style.cssText='background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:'+(cards[idx].color||'#FF6B6B')+';font-family:var(--font-mono);font-size:17px;font-weight:700;border-radius:4px;padding:2px 6px;width:110px;outline:none;';
+    el.textContent=''; el.appendChild(inp); inp.focus(); inp.select();
+    let saved=false;
+    function save(){if(saved)return;saved=true;const v=parseFloat(inp.value);if(!isNaN(v)&&v>=0){cards[idx].balance=v;ccSaveCards(cards);ccSyncNw();}ccRenderCards();}
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}else if(e.key==='Escape'){saved=true;ccRenderCards();}});
+    inp.addEventListener('blur',save);
+  }
+
+  window.__ccAdd = function() {
+    const name = (document.getElementById('ccName').value||'').trim();
+    const bal  = parseFloat(document.getElementById('ccBalance').value);
+    const lim  = parseFloat(document.getElementById('ccLimit').value);
+    const apr  = parseFloat(document.getElementById('ccApr').value);
+    const due  = parseInt(document.getElementById('ccDueDay').value);
+    const min  = parseFloat(document.getElementById('ccMinPmt').value);
+    const rtyp = document.getElementById('ccRewardType').value;
+    const rbase= parseFloat(document.getElementById('ccRewardBase').value);
+    const fb   = document.getElementById('ccFeedback');
+    if (!name) { if(fb){fb.textContent='Card name required.';fb.className='cc-feedback err';} return; }
+    if (isNaN(bal)||bal<0) { if(fb){fb.textContent='Enter a valid balance.';fb.className='cc-feedback err';} return; }
+    const card = {
+      id: crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),
+      name, balance:bal, limit:isNaN(lim)?0:lim, apr:isNaN(apr)?0:apr,
+      dueDay:isNaN(due)?0:due, minPmt:isNaN(min)?0:min,
+      rewardType:rtyp, rewardBase:isNaN(rbase)?0:rbase, color:_ccColor
+    };
+    const cards = ccGetCards(); cards.push(card); ccSaveCards(cards);
+    ccSyncNw();
+    ccRenderCards();
+    ['ccName','ccBalance','ccLimit','ccApr','ccDueDay','ccMinPmt','ccRewardBase'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('ccRewardType').value='none';
+    if(fb){fb.textContent=card.name+' added!';fb.className='cc-feedback ok';setTimeout(()=>{fb.textContent='';},2500);}
+  };
+
+  window.__ccDel = function(idx) {
+    const cards = ccGetCards();
+    if (!confirm('Remove "'+((cards[idx]&&cards[idx].name)||'this card')+'"?')) return;
+    cards.splice(idx,1); ccSaveCards(cards); ccSyncNw(); ccRenderCards();
+  };
+
+  // ── NW sync ──────────────────────────────────────────────────
+  function ccSyncNw() {
+    if (!storeGet(CC_SYNC_KEY)) return;
+    const total = ccGetCards().reduce((s,c)=>s+(Number(c.balance)||0),0);
+    const items = storeGet('nw:other')||[];
+    const ex = items.find(it=>it._ccSync);
+    if (ex) ex.amount=-total; else items.push({name:'CC Debt',amount:-total,_ccSync:true});
+    storeSet('nw:other',items);
+    renderAllNetWorth();
+  }
+  function ccClearNwSync() {
+    const items=(storeGet('nw:other')||[]).filter(it=>!it._ccSync);
+    storeSet('nw:other',items);
+    renderAllNetWorth();
+  }
+  window.__ccToggleSync = function() {
+    const on=document.getElementById('ccNwSync').checked;
+    storeSet(CC_SYNC_KEY,on);
+    if(on) ccSyncNw(); else ccClearNwSync();
+  };
+
+  // ── Render Liability ─────────────────────────────────────────
+  function ccRenderLiability() {
+    const cards = ccGetCards();
+    const total = cards.reduce((s,c)=>s+(Number(c.balance)||0),0);
+    const el=document.getElementById('liabilityAmt'); if(el) el.textContent=ccFmt(total);
+    const tog=document.getElementById('ccNwSync'); if(tog) tog.checked=!!storeGet(CC_SYNC_KEY);
+    const sorted=cards.slice().sort((a,b)=>(Number(b.apr)||0)-(Number(a.apr)||0));
+    const list=document.getElementById('ccAprList'); if(!list) return; list.innerHTML='';
+    let monthlyInt=0;
+    sorted.forEach(c=>{
+      const bal=Number(c.balance)||0, apr=Number(c.apr)||0;
+      const mo=bal*(apr/100/12); monthlyInt+=mo;
+      const row=document.createElement('div'); row.className='cc-apr-row';
+      row.innerHTML='<span class="cc-apr-name" style="border-left:3px solid '+(c.color||'#888')+';padding-left:8px">'+escapeHtml(c.name)+'</span>' +
+        '<div class="cc-apr-right"><div class="cc-apr-bal">'+ccFmt(bal)+'</div><div class="cc-apr-detail">'+apr.toFixed(2)+'% APR · '+ccFmt(mo)+'/mo</div></div>';
+      list.appendChild(row);
+    });
+    const ce=document.getElementById('ccMonthlyCost');
+    if(ce) ce.textContent=cards.length?'Est. monthly interest: '+ccFmt(monthlyInt):'';
+  }
+
+  // ── Rewards ───────────────────────────────────────────────────
+  function ccPopulateRwSel() {
+    const sel=document.getElementById('rwCardSel'); if(!sel) return;
+    const cards=ccGetCards();
+    sel.innerHTML=cards.length?cards.map(c=>'<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>').join(''):'<option value="">— add a card first —</option>';
+  }
+  function ccRenderRewardSummary() {
+    const cards=ccGetCards(); const rws=ccGetRw();
+    const list=document.getElementById('rwCardSummary'); const empty=document.getElementById('rwCardsEmpty');
+    if(!list) return; list.innerHTML='';
+    if(!cards.length){list.style.display='none';if(empty)empty.style.display='';return;}
+    list.style.display=''; if(empty) empty.style.display='none';
+    cards.forEach(c=>{
+      const earned=rws.filter(r=>r.cardId===c.id).reduce((s,r)=>s+(Number(r.amount)||0),0);
+      const row=document.createElement('div'); row.className='rw-card-row'; row.style.setProperty('--cc-c',c.color||'#888');
+      row.innerHTML='<div><div class="rw-card-name">'+escapeHtml(c.name)+'</div><div class="rw-card-type">'+(c.rewardType!=='none'?c.rewardType:'—')+'</div></div>' +
+        '<div><div class="rw-card-earned">'+(c.rewardType==='cashback'?ccFmt(earned):earned.toFixed(0)+' pts')+'</div><div class="rw-card-rate">'+(c.rewardBase?c.rewardBase+(c.rewardType==='cashback'?'%':'x')+' base':'')+'</div></div>';
+      list.appendChild(row);
+    });
+  }
+  function ccRenderRwHistory() {
+    const rws=ccGetRw().slice().sort((a,b)=>b.ts-a.ts);
+    const list=document.getElementById('rwHistory'); const empty=document.getElementById('rwHistEmpty');
+    if(!list) return; list.innerHTML='';
+    if(!rws.length){list.style.display='none';if(empty)empty.style.display='';return;}
+    list.style.display=''; if(empty) empty.style.display='none';
+    const cards=ccGetCards();
+    rws.slice(0,40).forEach((r,si)=>{
+      const card=cards.find(c=>c.id===r.cardId);
+      const d=new Date(r.ts); const ds=(d.getMonth()+1)+'/'+d.getDate();
+      const row=document.createElement('div'); row.className='rw-log-row';
+      row.innerHTML='<span class="rw-log-left">'+escapeHtml(card?card.name:'?')+(r.note?' · '+escapeHtml(r.note):'')+
+        ' <span class="cc-chip">'+escapeHtml(r.cat||'other')+'</span></span>' +
+        '<span><span class="rw-log-right">+'+(card&&card.rewardType==='cashback'?ccFmt(r.amount):(r.amount||0).toFixed(0)+' pts')+'</span><span class="rw-log-date">'+ds+'</span></span>';
+      const del=document.createElement('button'); del.textContent='×';
+      del.style.cssText='background:none;border:none;color:var(--text-quaternary);cursor:pointer;font-size:13px;margin-left:6px;';
+      del.addEventListener('click',()=>{
+        const all=ccGetRw(); const idx=all.findIndex(x=>x===r);
+        if(idx>-1){all.splice(idx,1);ccSaveRw(all);}
+        ccRenderRwHistory(); ccRenderRewardSummary();
+      });
+      row.appendChild(del); list.appendChild(row);
+    });
+  }
+  window.__ccLogReward = function() {
+    const cardId=document.getElementById('rwCardSel').value;
+    const amount=parseFloat(document.getElementById('rwAmount').value);
+    const cat=document.getElementById('rwCat').value;
+    const note=(document.getElementById('rwNote').value||'').trim();
+    const fb=document.getElementById('rwFeedback');
+    if(!cardId){if(fb){fb.textContent='Select a card.';fb.className='cc-feedback err';}return;}
+    if(isNaN(amount)||amount<=0){if(fb){fb.textContent='Enter a valid amount.';fb.className='cc-feedback err';}return;}
+    const rws=ccGetRw(); rws.push({ts:Date.now(),cardId,amount,cat,note}); ccSaveRw(rws);
+    document.getElementById('rwAmount').value=''; document.getElementById('rwNote').value='';
+    if(fb){fb.textContent='Logged!';fb.className='cc-feedback ok';setTimeout(()=>{fb.textContent='';},2000);}
+    ccRenderRewardSummary(); ccRenderRwHistory();
+  };
+
+  // ── Optimizer ────────────────────────────────────────────────
+  function ccRenderOptimizer() {
+    const cards=ccGetCards(); const rates=ccGetOpt();
+    const list=document.getElementById('optCatList'); if(!list) return; list.innerHTML='';
+    OPT_CATS.forEach(cat=>{
+      let best=null, bestRate=-1;
+      cards.forEach(c=>{
+        const r=(rates[c.id]&&rates[c.id][cat.key]!=null)?Number(rates[c.id][cat.key]):(c.rewardBase||0);
+        if(r>bestRate){bestRate=r;best=c;}
+      });
+      const row=document.createElement('div'); row.className='opt-cat-row';
+      const edit=document.createElement('button'); edit.className='opt-edit-btn'; edit.textContent='Edit';
+      edit.addEventListener('click',()=>ccOpenOptRates(cat));
+      row.innerHTML='<span class="opt-cat-name">'+cat.emoji+' '+cat.label+'</span>';
+      const mid=document.createElement('div'); mid.className='opt-best';
+      if(best){
+        mid.innerHTML='<div class="opt-cdot" style="background:'+(best.color||'#888')+'"></div>' +
+          '<span class="opt-cname">'+escapeHtml(best.name)+'</span>' +
+          '<span class="opt-rate-badge">'+bestRate.toFixed(1)+(best.rewardType==='cashback'?'%':'x')+'</span>';
+      } else { mid.innerHTML='<span class="opt-empty-lbl">Add cards first</span>'; }
+      row.appendChild(mid); row.appendChild(edit); list.appendChild(row);
+    });
+  }
+  function ccOpenOptRates(cat) {
+    const panel=document.getElementById('optRatesCard'); const title=document.getElementById('optRatesTitle'); const rList=document.getElementById('optRatesList');
+    if(!panel) return; panel.style.display='';
+    if(title) title.textContent='Rates for '+cat.label;
+    if(rList) rList.innerHTML='';
+    const cards=ccGetCards(); const rates=ccGetOpt();
+    cards.forEach(c=>{
+      const cur=(rates[c.id]&&rates[c.id][cat.key]!=null)?rates[c.id][cat.key]:(c.rewardBase||'');
+      const row=document.createElement('div'); row.className='opt-rate-input-row' ; row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+      const lbl=document.createElement('span'); lbl.style.cssText='font-size:12px;color:var(--text-secondary);flex:1;';
+      lbl.innerHTML='<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+(c.color||'#888')+';margin-right:6px"></span>'+escapeHtml(c.name);
+      const inp=document.createElement('input'); inp.type='number'; inp.step='0.01'; inp.min='0'; inp.value=String(cur);
+      inp.placeholder=c.rewardBase||'0'; inp.className='cc-input'; inp.style.width='70px'; inp.style.textAlign='right';
+      inp.addEventListener('change',()=>{
+        const all=ccGetOpt(); if(!all[c.id]) all[c.id]={};
+        const v=parseFloat(inp.value); all[c.id][cat.key]=isNaN(v)?(c.rewardBase||0):v; ccSaveOpt(all); ccRenderOptimizer();
+      });
+      row.appendChild(lbl); row.appendChild(inp); if(rList) rList.appendChild(row);
+    });
+    if(!cards.length&&rList) rList.innerHTML='<div style="font-size:12px;color:var(--text-quaternary)">Add cards in Balances first</div>';
+  }
+  window.__optClose=function(){const p=document.getElementById('optRatesCard');if(p)p.style.display='none';};
+
+  // ── Plaid ────────────────────────────────────────────────────
+  function ccRenderPlaid() {
+    const items=ccGetPlaid();
+    const list=document.getElementById('plaidInstList'); const empty=document.getElementById('plaidInstEmpty');
+    const syncBtn=document.getElementById('plaidSyncBalBtn'); const txBtn=document.getElementById('plaidTxBtn');
+    if(!list) return; list.innerHTML='';
+    if(!items.length){
+      if(empty) empty.style.display='';
+      if(syncBtn) syncBtn.style.display='none';
+      if(txBtn) txBtn.style.display='none';
+      return;
+    }
+    if(empty) empty.style.display='none';
+    if(syncBtn) syncBtn.style.display='';
+    if(txBtn) txBtn.style.display='';
+    items.forEach((item,i)=>{
+      const accts=(item.accounts||[]).length;
+      const row=document.createElement('div'); row.className='plaid-inst-row';
+      row.innerHTML='<div><div class="plaid-inst-name">'+escapeHtml(item.institution||'Unknown')+'</div><div class="plaid-inst-sub">'+accts+' account'+(accts===1?'':'s')+'</div></div>';
+      const del=document.createElement('button'); del.className='plaid-inst-del'; del.textContent='×';
+      del.addEventListener('click',()=>{
+        if(!confirm('Disconnect "'+escapeHtml(item.institution||'this account')+'"?')) return;
+        const arr=ccGetPlaid(); arr.splice(i,1); ccSavePlaid(arr); ccRenderPlaid();
+      });
+      row.appendChild(del); list.appendChild(row);
+    });
+  }
+  window.__plaidOpen = async function() {
+    const st=document.getElementById('plaidStatusMsg');
+    if(st) st.textContent='Creating link token…';
+    try {
+      const res=await fetch('/api/create-link-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_id:ccGetDevId()})});
+      const data=await res.json();
+      if(!res.ok||!data.link_token) throw new Error(data.error||'Failed to create link token');
+      if(st) st.textContent='';
+      if(!window.Plaid) throw new Error('Plaid Link SDK not loaded');
+      const handler=window.Plaid.create({
+        token:data.link_token,
+        onSuccess:async(pub,meta)=>{
+          if(st) st.textContent='Exchanging token…';
+          try{
+            const er=await fetch('/api/exchange-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_token:pub,device_id:ccGetDevId(),institution:meta.institution&&meta.institution.name})});
+            const ed=await er.json();
+            if(!er.ok) throw new Error(ed.error||'Exchange failed');
+            const items=ccGetPlaid(); items.push({itemId:ed.item_id,institution:ed.institution||(meta.institution&&meta.institution.name)||'Unknown',accounts:ed.accounts||[]}); ccSavePlaid(items);
+            if(st){st.textContent='Connected!';st.style.color='var(--success)';}
+            setTimeout(()=>{if(st)st.textContent='';},3000);
+            ccRenderPlaid();
+          }catch(e){if(st){st.textContent='Error: '+e.message;st.style.color='var(--danger)';}}
+        },
+        onExit:(err)=>{if(st){st.textContent=err?(err.display_message||err.error_message||'Exited.'):'';st.style.color='var(--text-tertiary)';}}
+      });
+      handler.open();
+    }catch(e){if(st){st.textContent='Error: '+e.message;st.style.color='var(--danger)';}}
+  };
+  window.__plaidSync = async function() {
+    const st=document.getElementById('plaidStatusMsg');
+    if(st) st.textContent='Fetching balances…';
+    try{
+      const res=await fetch('/api/get-accounts?device_id='+encodeURIComponent(ccGetDevId()));
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||'Fetch failed');
+      const accounts=data.accounts||[];
+      const updatedItems=ccGetPlaid().map(item=>{
+        const ia=accounts.filter(a=>a.item_id===item.itemId);
+        return{...item,accounts:ia.length?ia:item.accounts};
+      });
+      ccSavePlaid(updatedItems);
+      const cards=ccGetCards(); let matched=0;
+      accounts.forEach(acct=>{
+        const card=cards.find(c=>c.plaidAccountId===acct.account_id);
+        if(card&&acct.balances){card.balance=acct.balances.current||card.balance;matched++;}
+      });
+      if(matched){ccSaveCards(cards);ccSyncNw();ccRenderCards();}
+      if(st){st.textContent='Synced!'+(matched?' '+matched+' card(s) updated.':' No cards matched.');st.style.color=matched?'var(--success)':'var(--text-tertiary)';}
+      ccRenderPlaid();
+    }catch(e){if(st){st.textContent='Error: '+e.message;st.style.color='var(--danger)';}}
+  };
+  window.__plaidFetchTx = async function() {
+    const st=document.getElementById('plaidStatusMsg'); const txList=document.getElementById('plaidTxList'); const txEmpty=document.getElementById('plaidTxEmpty');
+    if(!txList) return;
+    if(st) st.textContent='Loading transactions…';
+    try{
+      const res=await fetch('/api/get-transactions?device_id='+encodeURIComponent(ccGetDevId()));
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error||'Fetch failed');
+      const txs=data.transactions||[];
+      if(st) st.textContent='';
+      if(!txs.length){txList.innerHTML='';if(txEmpty)txEmpty.style.display='';return;}
+      if(txEmpty) txEmpty.style.display='none';
+      txList.innerHTML=txs.slice(0,50).map(tx=>'<div class="rw-log-row">' +
+        '<span class="rw-log-left">'+escapeHtml(tx.merchant_name||tx.name||'?')+'</span>' +
+        '<span><span class="rw-log-right" style="color:'+(tx.amount<0?'var(--success)':'var(--danger)')+'">'+
+        (tx.amount<0?'+':'-')+ccFmt(Math.abs(tx.amount))+'</span><span class="rw-log-date">'+escapeHtml(tx.date||'')+'</span></span>' +
+        '</div>').join('');
+    }catch(e){if(st){st.textContent='Error: '+e.message;st.style.color='var(--danger)';}}
+  };
+
+  // ── CC Boot ───────────────────────────────────────────────────
+  (function ccBoot() {
+    ccRenderCards();
+    const saved=storeGet(CC_TAB_KEY);
+    ccSetInnerTab(saved&&CC_INNER_TABS.includes(saved)?saved:'balances');
+  })();
+
   (function initIncomeSection() {
     const cfg = storeGet(INCOME_KEY);
     if (cfg) loadIncomeCfg(cfg);
@@ -4519,7 +5191,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initCloudSync({
     appKey: 'finance',
     syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
-    syncedPrefixes: ['nw:'],
+    syncedPrefixes: ['nw:', 'stocks:', 'cc:'],
     onApplied: function () { window.dispatchEvent(new Event('storage')); }
   });
 });
