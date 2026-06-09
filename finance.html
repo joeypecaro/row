@@ -518,6 +518,107 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 .income-btn-clear:hover { color: var(--danger); }
 .income-feedback { font-size: 11px; color: var(--success); min-height: 16px; padding: 0 2px; }
 
+/* ===== Stocks tab ===== */
+.st-holding-card {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.025);
+  border-radius: 10px;
+  margin-bottom: 5px;
+  transition: background 0.15s;
+}
+.st-holding-card:hover { background: rgba(255,255,255,0.04); }
+.st-ticker-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 6px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 0.02em;
+  margin-top: 1px;
+}
+.st-ticker-badge.up   { background: rgba(107,227,164,0.12); color: var(--success); }
+.st-ticker-badge.down { background: rgba(255,107,107,0.10); color: var(--danger); }
+.st-ticker-badge.flat { background: rgba(255,255,255,0.07); color: var(--text-secondary); }
+.st-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 3px;
+  margin-left: -3px;
+}
+.st-name:hover { background: rgba(255,255,255,0.06); }
+.st-row2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.st-editable { cursor: pointer; border-radius: 3px; padding: 0 2px; }
+.st-editable:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.st-price { font-family: var(--font-mono); }
+.st-day-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+.st-day-badge.up   { background: rgba(107,227,164,0.10); color: var(--success); }
+.st-day-badge.down { background: rgba(255,107,107,0.08); color: var(--danger); }
+.st-gain-row {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.st-gain-row .up   { color: var(--success); }
+.st-gain-row .down { color: var(--danger); }
+.st-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-align: right;
+}
+.st-del {
+  display: block;
+  margin-top: 5px;
+  background: none;
+  border: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  font-size: 14px;
+  text-align: right;
+  padding: 0;
+  line-height: 1;
+}
+.st-del:hover { color: var(--danger); }
+.st-inline-edit {
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-primary);
+  border-radius: 5px;
+  outline: none;
+  max-width: 120px;
+}
+
 .nw-subcard {
   background: rgba(255,255,255,0.025) !important;
   border: none;
@@ -1817,7 +1918,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       </div>
       <!-- Stocks / Investments -->
       <div class="card nw-subcard">
-        <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>📈 Stocks / Investments</span><span style="display:flex;align-items:center;gap:10px"><a href="stocks.html" style="font-size:11px;color:var(--accent);text-decoration:none;font-weight:600;letter-spacing:0.02em;opacity:0.85" title="View live stock prices">Live prices →</a><span id="stocksTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></span></div>
+        <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>📈 Stocks / Investments</span><span id="stocksTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
         <div id="stocksList" class="nw-list"></div>
         <div class="quick-add">
           <input type="text" placeholder="Stock / fund" id="stocksName" />
@@ -2044,6 +2145,57 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 </div>
 
+<!-- ===== STOCKS ===== -->
+<div class="section" data-section="stocks">
+  <div class="section-title">
+    <span class="section-title-text">STOCKS</span>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,rgba(107,227,164,0.05),rgba(100,160,255,0.03));border:1px solid rgba(107,227,164,0.12)">
+    <!-- summary hero -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:8px">
+      <div>
+        <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;font-weight:500">Total portfolio</div>
+        <div id="stPortTotal" style="font-size:30px;font-weight:700;color:var(--text-primary);line-height:1.1;margin-top:2px;font-family:var(--font-mono)">—</div>
+        <div id="stPortDay"  style="font-size:13px;font-family:var(--font-mono);font-weight:600;margin-top:4px"></div>
+        <div id="stPortGain" style="font-size:11px;font-family:var(--font-mono);margin-top:2px;color:var(--text-tertiary)"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button id="stRefreshBtn" class="quick-add-btn" onclick="window.__stRefresh()" style="border-radius:999px;font-size:12px;padding:6px 14px">↻ Refresh</button>
+        <button id="stSyncBtn"   class="quick-add-btn" onclick="window.__stSyncNw()"  style="border-radius:999px;font-size:12px;padding:6px 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.09);color:var(--text-secondary)">⇅ Sync NW</button>
+      </div>
+    </div>
+    <div id="stUpdated" style="font-size:11px;color:var(--text-quaternary);margin-bottom:12px"></div>
+    <div id="stError"   style="display:none;padding:8px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.20);border-radius:8px;font-size:11px;color:var(--danger);margin-bottom:10px;line-height:1.5"></div>
+
+    <!-- holdings list -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary)">Holdings</span>
+        <span id="stHoldCount" style="font-size:11px;color:var(--text-quaternary)"></span>
+      </div>
+      <div id="stHoldList"></div>
+      <div id="stHoldEmpty" class="empty-state">No holdings yet — add your first position below.</div>
+    </div>
+
+    <!-- add form -->
+    <div class="quick-add" style="flex-wrap:wrap;gap:6px">
+      <input type="text"   id="stTicker"  placeholder="Ticker (e.g. AAPL)" maxlength="12" autocapitalize="characters"
+             style="flex:0 0 110px;font-family:var(--font-mono);text-transform:uppercase;font-weight:600;letter-spacing:0.03em" />
+      <input type="number" id="stShares"  placeholder="Shares" step="0.0001" min="0" style="flex:0 0 90px" />
+      <input type="number" id="stCost"    placeholder="Cost/sh USD (opt)" step="0.01" min="0" style="flex:1;min-width:110px" />
+      <select id="stAccount" style="flex:1;min-width:120px;padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)">
+        <option value="">No NW link</option>
+      </select>
+      <button class="quick-add-btn" onclick="window.__stAdd()">+ Add</button>
+    </div>
+    <div id="stFeedback" style="font-size:12px;min-height:16px;margin-top:7px"></div>
+    <div style="font-size:11px;color:var(--text-quaternary);margin-top:4px;line-height:1.5">
+      Requires <code style="font-size:10px;background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px">FINNHUB_API_KEY</code>
+      in Vercel environment variables. NW link syncs market value into your Stocks / Investments accounts.
+    </div>
+  </div>
+</div>
+
 <!-- ===== BOTTOM TAB BAR ===== -->
 <nav class="bottom-tabs" id="bottomTabs" aria-label="Sections">
   <button class="bot-tab active" data-tab="net">
@@ -2061,6 +2213,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <button class="bot-tab" data-tab="wish">
     <span class="bot-tab-icon">🎯</span>
     <span class="bot-tab-label">Wishlist</span>
+  </button>
+  <button class="bot-tab" data-tab="stocks">
+    <span class="bot-tab-icon">📈</span>
+    <span class="bot-tab-label">Stocks</span>
   </button>
 </nav>
 
@@ -2111,7 +2267,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   tabs.forEach(b => b.addEventListener('click', () => setActiveTab(b.dataset.tab)));
   const savedTab = storeGet(TAB_KEY);
-  setActiveTab(savedTab && ['net','subs','incoming','wish'].includes(savedTab) ? savedTab : 'net');
+  setActiveTab(savedTab && ['net','subs','incoming','wish','stocks'].includes(savedTab) ? savedTab : 'net');
 
   // ============================================================
   // NET WORTH (copied from the main dashboard, verbatim logic)
@@ -3599,6 +3755,397 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   safeRenderTicker();
   setInterval(safeRenderTicker, 1500);
+
+  // ============================================================
+  // STOCKS TAB
+  // ============================================================
+  const ST_HOLD_KEY  = 'stocks:holdings';
+  const ST_PRICE_KEY = 'stocks:prices';
+  const ST_TS_KEY    = 'stocks:last_refresh';
+  const ST_STALE_MS  = 5 * 60 * 1000;
+
+  let _stPrices = {};
+  let _stBusy   = false;
+
+  function stGetHoldings()    { return storeGet(ST_HOLD_KEY)  || []; }
+  function stSaveHoldings(h)  { storeSet(ST_HOLD_KEY, h); }
+
+  function stUsdToChf(usd)    { return (Number(usd) || 0) / (exchangeRates.USD || 1); }
+  function stFmtUsd(usd)      { return fmtMoney(stUsdToChf(usd)); }
+
+  function stSign(n)          { return n >= 0 ? '+' : ''; }
+
+  function stFmtShares(n) {
+    const v = Number(n) || 0;
+    return v % 1 === 0 ? String(v) : v.toFixed(4).replace(/\.?0+$/, '');
+  }
+
+  function stGetNwItems()     { return storeGet('nw:stocks') || []; }
+
+  function stPopulateAcctSel() {
+    const sel = document.getElementById('stAccount');
+    if (!sel) return;
+    const items = stGetNwItems();
+    sel.innerHTML = '<option value="">No NW link</option>';
+    items.forEach(it => {
+      const o = document.createElement('option');
+      o.value = it.name; o.textContent = '📈 ' + it.name;
+      sel.appendChild(o);
+    });
+  }
+
+  function stSetFeedback(msg, color) {
+    const el = document.getElementById('stFeedback');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || 'var(--success)';
+    if (msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+
+  function stSetError(msg) {
+    const el = document.getElementById('stError');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function stUpdateLabel() {
+    const el = document.getElementById('stUpdated');
+    if (!el) return;
+    const ts = storeGet(ST_TS_KEY);
+    if (!ts) { el.textContent = 'Prices not yet loaded — click Refresh'; return; }
+    const s = Math.round((Date.now() - ts) / 1000);
+    el.textContent = s < 60 ? 'Updated ' + s + 's ago'
+                   : s < 3600 ? 'Updated ' + Math.round(s / 60) + 'm ago'
+                   : 'Updated at ' + new Date(ts).toLocaleTimeString();
+  }
+
+  function stRenderSummary(holdings) {
+    let totalChf = 0, dayChf = 0, unrealChf = 0, unrealN = 0;
+    holdings.forEach(h => {
+      const q = _stPrices[h.ticker];
+      if (!q || !(q.c > 0)) return;
+      totalChf += stUsdToChf(q.c) * h.shares;
+      dayChf   += stUsdToChf(q.d) * h.shares;
+      if (h.costBasisUSD > 0) {
+        unrealChf += (stUsdToChf(q.c) - stUsdToChf(h.costBasisUSD)) * h.shares;
+        unrealN++;
+      }
+    });
+
+    const totEl  = document.getElementById('stPortTotal');
+    const dayEl  = document.getElementById('stPortDay');
+    const gainEl = document.getElementById('stPortGain');
+
+    if (totEl) totEl.textContent = totalChf > 0 ? fmtMoney(totalChf) : '—';
+
+    if (dayEl) {
+      if (totalChf > 0) {
+        const dir  = dayChf >= 0 ? 'var(--success)' : 'var(--danger)';
+        const prev = totalChf - dayChf;
+        const pct  = prev > 0 ? (dayChf / prev) * 100 : 0;
+        dayEl.style.color = dir;
+        dayEl.textContent = (dayChf >= 0 ? '▲ ' : '▼ ') + stSign(dayChf) + fmtMoney(dayChf) +
+          ' (' + stSign(pct) + pct.toFixed(2) + '%) today';
+      } else {
+        dayEl.textContent = '';
+      }
+    }
+
+    if (gainEl) {
+      if (unrealN > 0) {
+        const dir = unrealChf >= 0 ? 'var(--success)' : 'var(--danger)';
+        gainEl.innerHTML = 'Total gain: <span style="color:' + dir + ';font-weight:600">' +
+          stSign(unrealChf) + fmtMoney(unrealChf) + '</span>';
+      } else {
+        gainEl.innerHTML = '';
+      }
+    }
+  }
+
+  function stRenderHoldings() {
+    const holdings = stGetHoldings();
+    const listEl   = document.getElementById('stHoldList');
+    const emptyEl  = document.getElementById('stHoldEmpty');
+    const countEl  = document.getElementById('stHoldCount');
+    if (!listEl) return;
+
+    if (countEl) countEl.textContent = holdings.length + (holdings.length === 1 ? ' position' : ' positions');
+
+    if (!holdings.length) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      stRenderSummary([]);
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    listEl.innerHTML = '';
+
+    holdings.forEach((h, idx) => {
+      const q   = _stPrices[h.ticker];
+      const dir = !q ? 'flat' : (q.c > 0 ? (q.d > 0 ? 'up' : q.d < 0 ? 'down' : 'flat') : 'flat');
+
+      const card = document.createElement('div');
+      card.className = 'st-holding-card';
+
+      // Ticker badge
+      const badge = document.createElement('div');
+      badge.className = 'st-ticker-badge ' + dir;
+      badge.textContent = h.ticker;
+
+      // Mid column
+      const mid = document.createElement('div');
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'st-name';
+      nameEl.textContent = h.name || h.ticker;
+      nameEl.title = 'Click to rename';
+      nameEl.addEventListener('click', () => stBeginEdit('name', nameEl, holdings, idx));
+      mid.appendChild(nameEl);
+
+      const row2 = document.createElement('div');
+      row2.className = 'st-row2';
+
+      const sharesEl = document.createElement('span');
+      sharesEl.className = 'st-editable';
+      sharesEl.textContent = stFmtShares(h.shares) + ' sh';
+      sharesEl.title = 'Click to edit';
+      sharesEl.addEventListener('click', () => stBeginEdit('shares', sharesEl, holdings, idx));
+      row2.appendChild(sharesEl);
+
+      if (q && q.c > 0) {
+        const priceEl = document.createElement('span');
+        priceEl.className = 'st-price';
+        priceEl.textContent = stFmtUsd(q.c) + '/sh';
+        row2.appendChild(priceEl);
+
+        const dayBadge = document.createElement('span');
+        dayBadge.className = 'st-day-badge ' + dir;
+        dayBadge.textContent = stSign(q.d) + stFmtUsd(q.d) + ' (' + stSign(q.dp) + (Number(q.dp)||0).toFixed(2) + '%)';
+        row2.appendChild(dayBadge);
+      } else if (q && q._err) {
+        const errEl = document.createElement('span');
+        errEl.style.cssText = 'color:var(--danger);font-size:11px';
+        errEl.textContent = 'Error: ' + q._err;
+        row2.appendChild(errEl);
+      } else {
+        const ph = document.createElement('span');
+        ph.style.color = 'var(--text-quaternary)';
+        ph.textContent = '—';
+        row2.appendChild(ph);
+      }
+      mid.appendChild(row2);
+
+      if (q && q.c > 0 && h.costBasisUSD > 0) {
+        const gainChf = (stUsdToChf(q.c) - stUsdToChf(h.costBasisUSD)) * h.shares;
+        const gainPct = ((q.c - h.costBasisUSD) / h.costBasisUSD) * 100;
+        const gd      = gainChf >= 0 ? 'up' : 'down';
+        const gainRow = document.createElement('div');
+        gainRow.className = 'st-gain-row';
+
+        const costSpan = document.createElement('span');
+        costSpan.className = 'st-editable';
+        costSpan.style.fontFamily = 'var(--font-mono)';
+        costSpan.textContent = 'cost $' + (h.costBasisUSD||0).toFixed(2) + '/sh';
+        costSpan.title = 'Click to edit';
+        costSpan.addEventListener('click', () => stBeginEdit('cost', costSpan, holdings, idx));
+        gainRow.appendChild(costSpan);
+
+        const g = document.createElement('span');
+        g.className = gd;
+        g.textContent = '  ' + stSign(gainChf) + fmtMoney(gainChf) + ' (' + stSign(gainPct) + gainPct.toFixed(1) + '%)';
+        gainRow.appendChild(g);
+        mid.appendChild(gainRow);
+      } else if (q && q.c > 0) {
+        const costPrompt = document.createElement('div');
+        costPrompt.className = 'st-gain-row st-editable';
+        costPrompt.style.fontStyle = 'italic';
+        costPrompt.textContent = '+ add cost basis';
+        costPrompt.addEventListener('click', () => stBeginEdit('cost', costPrompt, holdings, idx));
+        mid.appendChild(costPrompt);
+      }
+
+      if (h.nwAccount) {
+        const linkEl = document.createElement('div');
+        linkEl.style.cssText = 'font-size:10px;color:var(--text-quaternary);margin-top:3px;';
+        linkEl.textContent = '⇅ ' + h.nwAccount;
+        mid.appendChild(linkEl);
+      }
+
+      // Right column
+      const right = document.createElement('div');
+      right.style.textAlign = 'right';
+
+      if (q && q.c > 0) {
+        const valEl = document.createElement('div');
+        valEl.className = 'st-value';
+        valEl.textContent = fmtMoney(stUsdToChf(q.c) * h.shares);
+        right.appendChild(valEl);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'st-del';
+      delBtn.textContent = '×';
+      delBtn.title = 'Remove holding';
+      delBtn.addEventListener('click', () => {
+        if (!confirm('Remove ' + h.ticker + '?')) return;
+        const updated = stGetHoldings();
+        updated.splice(idx, 1);
+        stSaveHoldings(updated);
+        stRenderHoldings();
+      });
+      right.appendChild(delBtn);
+
+      card.appendChild(badge);
+      card.appendChild(mid);
+      card.appendChild(right);
+      listEl.appendChild(card);
+    });
+
+    stRenderSummary(holdings);
+  }
+
+  function stBeginEdit(field, el, holdings, idx) {
+    if (el.querySelector('input')) return;
+    const cur = field === 'name'   ? (holdings[idx].name || holdings[idx].ticker)
+              : field === 'shares' ? holdings[idx].shares
+              : (holdings[idx].costBasisUSD || '');
+    const input = document.createElement('input');
+    input.className = 'st-inline-edit';
+    input.type  = field === 'name' ? 'text' : 'number';
+    input.value = cur !== 0 ? cur : '';
+    input.placeholder = field === 'name' ? 'Name' : field === 'shares' ? 'Shares' : 'Cost/sh USD';
+    if (field === 'shares') { input.min = '0.0001'; input.step = '0.0001'; }
+    if (field === 'cost')   { input.min = '0'; input.step = '0.01'; }
+    el.textContent = '';
+    el.appendChild(input);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+    let saved = false;
+    function save() {
+      if (saved) return; saved = true;
+      const v = input.value.trim();
+      const updated = stGetHoldings();
+      if (field === 'name'   && v)               updated[idx].name         = v;
+      if (field === 'shares' && parseFloat(v) > 0) updated[idx].shares     = parseFloat(v);
+      if (field === 'cost')  updated[idx].costBasisUSD = parseFloat(v) > 0 ? parseFloat(v) : 0;
+      stSaveHoldings(updated);
+      stRenderHoldings();
+    }
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); save(); }
+      if (e.key === 'Escape') { saved = true; stRenderHoldings(); }
+    });
+    input.addEventListener('blur', save);
+  }
+
+  async function stFetchPrices(tickers, withProfile) {
+    const url = '/api/stock-quote?symbols=' + encodeURIComponent(tickers.join(',')) +
+                (withProfile ? '&profile=true' : '');
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'HTTP ' + res.status);
+    }
+    const data = await res.json();
+    if (data.quotes) Object.assign(_stPrices, data.quotes);
+    return data.quotes || {};
+  }
+
+  window.__stRefresh = async function() {
+    if (_stBusy) return;
+    _stBusy = true;
+    const btn = document.getElementById('stRefreshBtn');
+    if (btn) { btn.textContent = '↻…'; btn.disabled = true; }
+    stSetError('');
+    try {
+      const tickers = [...new Set(stGetHoldings().map(h => h.ticker))];
+      if (tickers.length) {
+        await stFetchPrices(tickers, false);
+        storeSet(ST_PRICE_KEY, _stPrices);
+        storeSet(ST_TS_KEY, Date.now());
+      }
+      stRenderHoldings();
+      stUpdateLabel();
+    } catch (e) {
+      stSetError(e.message + ' — Check that FINNHUB_API_KEY is set in Vercel Dashboard → Settings → Environment Variables.');
+    } finally {
+      _stBusy = false;
+      if (btn) { btn.textContent = '↻ Refresh'; btn.disabled = false; }
+    }
+  };
+
+  window.__stSyncNw = function() {
+    const holdings = stGetHoldings().filter(h => h.nwAccount && _stPrices[h.ticker] && _stPrices[h.ticker].c > 0);
+    if (!holdings.length) {
+      const btn = document.getElementById('stSyncBtn');
+      if (btn) { const orig = btn.textContent; btn.textContent = '⇅ No links set'; setTimeout(() => btn.textContent = orig, 2000); }
+      return;
+    }
+    const totals = {};
+    holdings.forEach(h => {
+      totals[h.nwAccount] = (totals[h.nwAccount] || 0) + stUsdToChf(_stPrices[h.ticker].c) * h.shares;
+    });
+    const items = stGetNwItems();
+    let n = 0;
+    Object.entries(totals).forEach(([name, chf]) => {
+      const item = items.find(it => it.name === name);
+      if (item) { item.amount = chf; n++; }
+    });
+    if (n) { storeSet('nw:stocks', items); renderAllNetWorth(); }
+    const btn = document.getElementById('stSyncBtn');
+    if (btn) { const orig = btn.textContent; btn.textContent = '✓ Synced ' + n; setTimeout(() => btn.textContent = orig, 2500); }
+  };
+
+  window.__stAdd = async function() {
+    const ticker  = (document.getElementById('stTicker').value  || '').trim().toUpperCase();
+    const shares  = parseFloat(document.getElementById('stShares').value);
+    const costUSD = parseFloat(document.getElementById('stCost').value) || 0;
+    const nwAcct  = (document.getElementById('stAccount').value || '').trim();
+
+    if (!ticker)                              { return stSetFeedback('Enter a ticker symbol',   'var(--warning)'); }
+    if (!/^[A-Z0-9.\-^]{1,12}$/.test(ticker)){ return stSetFeedback('Invalid ticker format',  'var(--warning)'); }
+    if (isNaN(shares) || shares <= 0)         { return stSetFeedback('Enter number of shares', 'var(--warning)'); }
+
+    stSetFeedback('Looking up ' + ticker + '…', 'var(--text-tertiary)');
+    let name = ticker;
+    try {
+      const quotes = await stFetchPrices([ticker], true);
+      if (quotes[ticker] && quotes[ticker].name) name = quotes[ticker].name;
+      storeSet(ST_PRICE_KEY, _stPrices);
+      storeSet(ST_TS_KEY, Date.now());
+    } catch (e) {
+      stSetFeedback('Price lookup failed — added without live price', 'var(--warning)');
+    }
+
+    const holdings = stGetHoldings();
+    holdings.push({ ticker, name, shares, costBasisUSD: costUSD, nwAccount: nwAcct });
+    stSaveHoldings(holdings);
+
+    document.getElementById('stTicker').value  = '';
+    document.getElementById('stShares').value  = '';
+    document.getElementById('stCost').value    = '';
+    document.getElementById('stAccount').value = '';
+
+    stSetFeedback('✓ Added ' + stFmtShares(shares) + ' × ' + ticker + (name !== ticker ? ' — ' + name : ''), 'var(--success)');
+    stUpdateLabel();
+    stRenderHoldings();
+  };
+
+  (function stBoot() {
+    _stPrices = storeGet(ST_PRICE_KEY) || {};
+    stPopulateAcctSel();
+    stRenderHoldings();
+    stUpdateLabel();
+    setInterval(stUpdateLabel, 30000);
+    // Auto-refresh if stale and prices exist in cache already (user has holdings)
+    const lastTs = storeGet(ST_TS_KEY);
+    if (stGetHoldings().length && (!lastTs || Date.now() - lastTs > ST_STALE_MS)) {
+      window.__stRefresh();
+    }
+    window.addEventListener('storage', e => {
+      if (e.key === 'nw:stocks' || e.key === null) stPopulateAcctSel();
+    });
+  })();
 
   // ============================================================
   // INCOME & PAYCHECK SPLITTER
