@@ -398,6 +398,126 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
 }
 .nw-del:hover { color: var(--danger); }
 
+/* APY sub-row for bank accounts */
+.nw-apy-sub {
+  display: flex; align-items: center; gap: 8px;
+  padding: 2px 0 4px 2px; font-size: 11px; color: var(--text-tertiary);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer; line-height: 1.3;
+}
+.nw-apy-sub:hover { color: var(--text-secondary); }
+.nw-apy-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 6px; background: rgba(107,227,164,0.10); color: var(--success);
+  border-radius: 999px; font-size: 10px; font-weight: 600;
+  font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
+}
+.nw-apy-set { color: var(--text-quaternary); font-style: italic; }
+#bankQuickAdd { grid-template-columns: 1fr 100px 70px auto !important; }
+
+/* ===== Income / Paycheck Splitter ===== */
+.income-section {
+  margin-top: 18px; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 14px;
+}
+.income-toggle {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-tertiary); padding: 4px 0;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.income-toggle:hover { color: var(--text-secondary); }
+.income-toggle-icon { font-size: 9px; transition: transform 0.2s; }
+.income-toggle-icon.open { transform: rotate(90deg); }
+.income-net-preview {
+  margin-left: auto; font-size: 12px; font-weight: 700;
+  color: var(--success); font-family: var(--font-mono);
+}
+.income-body { margin-top: 14px; display: flex; flex-direction: column; gap: 16px; }
+.income-form { display: flex; flex-direction: column; gap: 10px; }
+.income-form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.income-form-row label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 11px;
+  color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
+  font-weight: 500; flex: 1; min-width: 100px;
+}
+.income-form-row input[type="text"],
+.income-form-row input[type="number"],
+.income-form-row select {
+  padding: 7px 10px; background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.10); border-radius: var(--radius-md);
+  color: var(--text-primary); font-family: var(--font); font-size: 13px; outline: none; width: 100%;
+}
+.income-amt-wrap { position: relative; display: flex; align-items: center; }
+.income-amt-wrap input { padding-right: 28px; }
+.income-amt-suffix {
+  position: absolute; right: 10px; color: var(--text-tertiary); font-size: 12px; pointer-events: none;
+}
+.income-pretax-row {
+  display: flex !important; flex-direction: row !important; align-items: center !important;
+  gap: 12px !important; flex-wrap: wrap;
+}
+.income-pretax-toggle {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: var(--text-secondary); min-width: auto;
+  text-transform: none !important; letter-spacing: 0 !important; font-weight: 400 !important;
+}
+.income-pretax-toggle input[type="checkbox"] {
+  width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer;
+}
+.income-taxrate-label { min-width: 80px !important; flex: 0 0 auto !important; }
+.income-split-section {
+  background: rgba(255,255,255,0.025); border-radius: 10px; padding: 12px;
+}
+.income-split-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px;
+}
+.income-split-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.income-split-row {
+  display: grid; grid-template-columns: 1fr 60px 75px auto; gap: 6px; align-items: center;
+}
+.income-split-row select,
+.income-split-row input {
+  padding: 5px 8px; background: rgba(255,255,255,0.05);
+  border: 0.5px solid rgba(255,255,255,0.10); border-radius: var(--radius-sm);
+  color: var(--text-primary); font-size: 12px; font-family: var(--font); outline: none; width: 100%;
+}
+.income-split-del {
+  background: none; border: none; color: var(--text-tertiary);
+  cursor: pointer; font-size: 14px; padding: 0 4px; line-height: 1;
+}
+.income-split-del:hover { color: var(--danger); }
+.income-add-split-btn {
+  background: none; border: 1px dashed rgba(255,255,255,0.15); border-radius: 6px;
+  color: var(--text-tertiary); font-size: 11px; font-family: var(--font);
+  cursor: pointer; padding: 5px 10px; width: 100%;
+}
+.income-add-split-btn:hover { color: var(--text-secondary); border-color: rgba(255,255,255,0.3); }
+.income-preview {
+  background: rgba(107,227,164,0.06); border: 1px solid rgba(107,227,164,0.15);
+  border-radius: 10px; padding: 12px 14px; font-size: 12px;
+  color: var(--text-secondary); line-height: 1.6; display: none;
+}
+.income-preview.visible { display: block; }
+.income-preview strong { color: var(--success); font-family: var(--font-mono); }
+.income-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.income-btn {
+  padding: 8px 16px; border-radius: var(--radius-md); border: none;
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.income-btn-log {
+  background: rgba(107,227,164,0.15); color: var(--success);
+  border: 1px solid rgba(107,227,164,0.25);
+}
+.income-btn-log:hover { background: rgba(107,227,164,0.25); }
+.income-btn-save { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+.income-btn-save:hover { background: rgba(255,255,255,0.12); }
+.income-btn-clear { background: none; color: var(--text-tertiary); }
+.income-btn-clear:hover { color: var(--danger); }
+.income-feedback { font-size: 11px; color: var(--success); min-height: 16px; padding: 0 2px; }
+
 .nw-subcard {
   background: rgba(255,255,255,0.025) !important;
   border: none;
@@ -1688,9 +1808,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <div class="card nw-subcard">
         <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>🏦 Bank accounts</span><span id="bankTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
         <div id="bankList" class="nw-list"></div>
-        <div class="quick-add">
+        <div class="quick-add" id="bankQuickAdd">
           <input type="text" placeholder="Account name" id="bankName" />
           <input type="number" placeholder="Amount" id="bankAmount" step="0.01" />
+          <input type="number" placeholder="APY%" id="bankApy" step="0.01" min="0" max="100" />
           <button class="quick-add-btn" id="bankAddBtn">+</button>
         </div>
       </div>
@@ -1723,6 +1844,63 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           <input type="number" placeholder="Value" id="otherAmount" step="0.01" />
           <button class="quick-add-btn" id="otherAddBtn">+</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Income & Paycheck Splitter -->
+    <div class="income-section" id="incomeSection">
+      <div class="income-toggle" onclick="window.__toggleIncome()">
+        <span class="income-toggle-icon" id="incomeTglIcon">▶</span>
+        <span>INCOME</span>
+        <span class="income-net-preview" id="incomeNetPreview"></span>
+      </div>
+      <div class="income-body" id="incomeBody" style="display:none">
+        <div class="income-form">
+          <div class="income-form-row">
+            <label>Source
+              <input type="text" id="incSrc" placeholder="e.g. Accenture" />
+            </label>
+            <label>Amount / paycheck
+              <input type="number" id="incGross" placeholder="0.00" step="0.01" min="0" />
+            </label>
+            <label>Frequency
+              <select id="incFreq">
+                <option value="weekly">Weekly</option>
+                <option value="biweekly" selected>Bi-weekly</option>
+                <option value="semimonthly">Semi-monthly (24×)</option>
+                <option value="monthly">Monthly</option>
+                <option value="annually">Annually</option>
+              </select>
+            </label>
+          </div>
+          <div class="income-form-row income-pretax-row">
+            <label class="income-pretax-toggle" style="flex:none">
+              <input type="checkbox" id="incPreTax" />
+              <span>Pre-tax — apply deduction</span>
+            </label>
+            <label id="incTaxRateWrap" class="income-taxrate-label" style="display:none">Tax rate
+              <div class="income-amt-wrap">
+                <input type="number" id="incTaxRate" placeholder="25" min="0" max="100" step="0.1" />
+                <span class="income-amt-suffix">%</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="income-split-section">
+          <div class="income-split-head">
+            <span>Paycheck split</span>
+            <span id="incomeSplitRemaining"></span>
+          </div>
+          <div id="incomeSplitList" class="income-split-list"></div>
+          <button class="income-add-split-btn" onclick="window.__incAddSplit()">+ Add account</button>
+        </div>
+        <div class="income-preview" id="incomePreview"></div>
+        <div class="income-actions">
+          <button class="income-btn income-btn-log" onclick="window.__incLogPaycheck()">💰 Log Paycheck</button>
+          <button class="income-btn income-btn-save" onclick="window.__incSave()">Save Config</button>
+          <button class="income-btn income-btn-clear" onclick="window.__incClear()">Clear</button>
+        </div>
+        <div class="income-feedback" id="incomeFeedback"></div>
       </div>
     </div>
   </div>
@@ -2004,6 +2182,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       });
       row.appendChild(name); row.appendChild(amt); row.appendChild(del);
       list.appendChild(row);
+      if (cat.key === 'bank') {
+        const apy = Number(it.apy) || 0;
+        const amtChf = Number(it.amount) || 0;
+        const sub = document.createElement('div');
+        sub.className = 'nw-apy-sub';
+        if (apy > 0) {
+          const annual = amtChf * (apy / 100);
+          sub.innerHTML = '<span class="nw-apy-badge">▲ ' + apy.toFixed(2) + '% APY</span>' +
+            '<span>earning ' + fmtMoney(annual) + '/yr · ' + fmtMoney(annual / 12) + '/mo</span>';
+        } else {
+          sub.innerHTML = '<span class="nw-apy-set">+ set APY rate</span>';
+        }
+        sub.addEventListener('click', () => beginNwApyEdit(sub, items, idx, cat.key));
+        list.appendChild(sub);
+      }
     });
     document.getElementById(cat.totalId).textContent = fmtMoney(total);
     return total;
@@ -2068,6 +2261,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       if (saved) return; saved = true;
       const v = input.value.trim();
       if (v) { items[idx].name = v; storeSet('nw:' + catKey, items); }
+      renderAllNetWorth();
+    }
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+      else if (e.key === 'Escape') { saved = true; renderAllNetWorth(); }
+    });
+    input.addEventListener('blur', save);
+  }
+  function beginNwApyEdit(subEl, items, idx, catKey) {
+    if (subEl.querySelector('input')) return;
+    const cur = Number(items[idx].apy) || 0;
+    const input = document.createElement('input');
+    input.type = 'number'; input.step = '0.01'; input.min = '0'; input.max = '100';
+    input.value = cur > 0 ? String(cur) : '';
+    input.placeholder = 'APY%';
+    input.style.cssText = 'width:80px;padding:3px 6px;font-family:var(--font-mono);font-size:11px;background:rgba(0,0,0,0.30);border:1px solid rgba(255,255,255,0.10);color:var(--text-primary);border-radius:6px;text-align:right;outline:none;';
+    subEl.innerHTML = '';
+    subEl.appendChild(input);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
+    let saved = false;
+    function save() {
+      if (saved) return; saved = true;
+      const v = parseFloat(input.value);
+      items[idx].apy = (!isNaN(v) && v >= 0) ? v : 0;
+      storeSet('nw:' + catKey, items);
       renderAllNetWorth();
     }
     input.addEventListener('keydown', (e) => {
@@ -2397,7 +2615,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const rate = exchangeRates[symbol] || 1;
       const amountCHF = a / rate;
       const items = storeGet('nw:' + cat.key) || [];
-      items.push({ name: n, amount: amountCHF });
+      const newItem = { name: n, amount: amountCHF };
+      if (cat.key === 'bank') {
+        const bankApyEl = document.getElementById('bankApy');
+        const apyVal = bankApyEl ? parseFloat(bankApyEl.value) : NaN;
+        newItem.apy = (!isNaN(apyVal) && apyVal > 0) ? apyVal : 0;
+        if (bankApyEl) bankApyEl.value = '';
+      }
+      items.push(newItem);
       storeSet('nw:' + cat.key, items);
       logActivity(cat.key, n, amountCHF, 'add');
       nameInput.value = ''; amtInput.value = '';
@@ -3374,6 +3599,212 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
   safeRenderTicker();
   setInterval(safeRenderTicker, 1500);
+
+  // ============================================================
+  // INCOME & PAYCHECK SPLITTER
+  // ============================================================
+  const INCOME_KEY = 'nw:income_config';
+  let _incomeSplits = [];
+  let _incomeOpen = false;
+
+  function incomeFreqToAnnual(freq) {
+    return { weekly: 52, biweekly: 26, semimonthly: 24, monthly: 12, annually: 1 }[freq] || 26;
+  }
+
+  function incomeNetPerPaycheck() {
+    const gross = parseFloat(document.getElementById('incGross').value) || 0;
+    const symbol = currencyEl ? currencyEl.value : 'CHF';
+    const rate = exchangeRates[symbol] || 1;
+    const grossCHF = gross / rate;
+    const preTax = document.getElementById('incPreTax').checked;
+    if (!preTax) return grossCHF;
+    const taxRate = Math.min(Math.max(parseFloat(document.getElementById('incTaxRate').value) || 0, 0), 100);
+    return grossCHF * (1 - taxRate / 100);
+  }
+
+  function updateIncomePreview() {
+    const net = incomeNetPerPaycheck();
+    const freq = (document.getElementById('incFreq') || {}).value || 'biweekly';
+    const annual = net * incomeFreqToAnnual(freq);
+    const prevEl = document.getElementById('incomePreview');
+    const netPrevEl = document.getElementById('incomeNetPreview');
+    if (netPrevEl) netPrevEl.textContent = net > 0 ? fmtMoney(net) + '/paycheck' : '';
+    if (!prevEl) return;
+    if (net <= 0) { prevEl.classList.remove('visible'); return; }
+    const totalPct = _incomeSplits.reduce((s, r) => s + (Number(r.pct) || 0), 0);
+    let html = '<b>Net/paycheck:</b> <strong>' + fmtMoney(net) + '</strong>';
+    html += '&nbsp;&nbsp;·&nbsp;&nbsp;<b>Annual:</b> <strong>' + fmtMoney(annual) + '</strong>';
+    html += '&nbsp;&nbsp;·&nbsp;&nbsp;<b>Monthly avg:</b> <strong>' + fmtMoney(annual / 12) + '</strong>';
+    if (_incomeSplits.length > 0) {
+      const allocated = net * (totalPct / 100);
+      html += '<br><b>Allocated:</b> <strong>' + fmtMoney(allocated) + '</strong> (' + totalPct.toFixed(0) + '%)';
+      if (totalPct > 100) html += ' <span style="color:var(--danger)">⚠ exceeds 100%</span>';
+    }
+    prevEl.innerHTML = html;
+    prevEl.classList.add('visible');
+  }
+
+  function renderIncomeSplitList() {
+    const listEl = document.getElementById('incomeSplitList');
+    const remainEl = document.getElementById('incomeSplitRemaining');
+    if (!listEl) return;
+    const accounts = listAllNwAccounts();
+    const totalPct = _incomeSplits.reduce((s, r) => s + (Number(r.pct) || 0), 0);
+    if (remainEl) {
+      const rem = 100 - totalPct;
+      remainEl.textContent = rem >= 0 ? rem.toFixed(0) + '% unallocated' : totalPct.toFixed(0) + '% (over budget)';
+      remainEl.style.color = totalPct > 100 ? 'var(--danger)' : 'var(--text-tertiary)';
+    }
+    listEl.innerHTML = '';
+    const net = incomeNetPerPaycheck();
+    const ICONS = { bank: '🏦', stocks: '📈', crypto: '🪙', other: '💼' };
+    _incomeSplits.forEach((row, i) => {
+      const div = document.createElement('div');
+      div.className = 'income-split-row';
+      const sel = document.createElement('select');
+      if (!accounts.length) {
+        const opt = document.createElement('option'); opt.textContent = 'No accounts yet'; sel.appendChild(opt);
+      } else {
+        accounts.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = acc.catKey + ':' + acc.itemIdx;
+          opt.textContent = (ICONS[acc.catKey] || '') + ' ' + acc.itemName;
+          opt.selected = (acc.catKey === row.catKey && acc.itemIdx === row.itemIdx);
+          sel.appendChild(opt);
+        });
+      }
+      sel.addEventListener('change', () => {
+        const [ck, ix] = sel.value.split(':');
+        _incomeSplits[i].catKey = ck;
+        _incomeSplits[i].itemIdx = parseInt(ix) || 0;
+        renderIncomeSplitList();
+      });
+      const pctInput = document.createElement('input');
+      pctInput.type = 'number'; pctInput.min = '0'; pctInput.max = '100'; pctInput.step = '1';
+      pctInput.placeholder = '%'; pctInput.value = row.pct || '';
+      pctInput.addEventListener('input', () => {
+        _incomeSplits[i].pct = parseFloat(pctInput.value) || 0;
+        updateIncomePreview(); renderIncomeSplitList();
+      });
+      const amtInput = document.createElement('input');
+      amtInput.type = 'text'; amtInput.readOnly = true; amtInput.tabIndex = -1;
+      amtInput.value = (net > 0 && row.pct > 0) ? fmtMoney(net * (Number(row.pct) || 0) / 100) : '—';
+      amtInput.style.cssText = 'background:transparent;border-color:transparent!important;color:var(--text-tertiary);font-family:var(--font-mono);font-size:11px;cursor:default;text-align:right;';
+      const del = document.createElement('button'); del.className = 'income-split-del'; del.textContent = '×';
+      del.addEventListener('click', () => { _incomeSplits.splice(i, 1); updateIncomePreview(); renderIncomeSplitList(); });
+      div.appendChild(sel); div.appendChild(pctInput); div.appendChild(amtInput); div.appendChild(del);
+      listEl.appendChild(div);
+    });
+    updateIncomePreview();
+  }
+
+  function showIncomeFeedback(msg, color) {
+    const el = document.getElementById('incomeFeedback');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = color || 'var(--success)';
+    setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+  }
+
+  function loadIncomeCfg(cfg) {
+    if (!cfg) return;
+    const srcEl = document.getElementById('incSrc');
+    const grossEl = document.getElementById('incGross');
+    const freqEl = document.getElementById('incFreq');
+    const preTaxEl = document.getElementById('incPreTax');
+    const taxRateEl = document.getElementById('incTaxRate');
+    const taxRateWrap = document.getElementById('incTaxRateWrap');
+    if (srcEl && cfg.src) srcEl.value = cfg.src;
+    if (grossEl && cfg.gross) grossEl.value = cfg.gross;
+    if (freqEl && cfg.freq) freqEl.value = cfg.freq;
+    if (preTaxEl) {
+      preTaxEl.checked = !!cfg.preTax;
+      if (taxRateWrap) taxRateWrap.style.display = cfg.preTax ? '' : 'none';
+    }
+    if (taxRateEl && cfg.taxRate) taxRateEl.value = cfg.taxRate;
+    _incomeSplits = (cfg.splits || []).map(s => ({ catKey: s.catKey, itemIdx: s.itemIdx, pct: s.pct }));
+  }
+
+  window.__toggleIncome = function() {
+    _incomeOpen = !_incomeOpen;
+    const body = document.getElementById('incomeBody');
+    const icon = document.getElementById('incomeTglIcon');
+    if (body) body.style.display = _incomeOpen ? 'flex' : 'none';
+    if (icon) icon.classList.toggle('open', _incomeOpen);
+    if (_incomeOpen) renderIncomeSplitList();
+  };
+
+  window.__incAddSplit = function() {
+    const accounts = listAllNwAccounts();
+    if (!accounts.length) { showIncomeFeedback('Add a bank account first', 'var(--warning)'); return; }
+    const first = accounts[0];
+    _incomeSplits.push({ catKey: first.catKey, itemIdx: first.itemIdx, pct: 0 });
+    renderIncomeSplitList();
+  };
+
+  window.__incSave = function() {
+    const cfg = {
+      src: (document.getElementById('incSrc').value || '').trim(),
+      gross: parseFloat(document.getElementById('incGross').value) || 0,
+      freq: document.getElementById('incFreq').value,
+      preTax: document.getElementById('incPreTax').checked,
+      taxRate: parseFloat(document.getElementById('incTaxRate').value) || 0,
+      splits: _incomeSplits.map(r => ({ catKey: r.catKey, itemIdx: r.itemIdx, pct: r.pct }))
+    };
+    storeSet(INCOME_KEY, cfg);
+    showIncomeFeedback('Config saved');
+  };
+
+  window.__incClear = function() {
+    ['incSrc', 'incGross', 'incTaxRate'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const freqEl = document.getElementById('incFreq'); if (freqEl) freqEl.value = 'biweekly';
+    const preTaxEl = document.getElementById('incPreTax'); if (preTaxEl) preTaxEl.checked = false;
+    const taxWrap = document.getElementById('incTaxRateWrap'); if (taxWrap) taxWrap.style.display = 'none';
+    _incomeSplits = [];
+    storeSet(INCOME_KEY, null);
+    renderIncomeSplitList();
+    const prevEl = document.getElementById('incomePreview'); if (prevEl) prevEl.classList.remove('visible');
+    const netPrevEl = document.getElementById('incomeNetPreview'); if (netPrevEl) netPrevEl.textContent = '';
+  };
+
+  window.__incLogPaycheck = function() {
+    const net = incomeNetPerPaycheck();
+    if (!(net > 0)) { showIncomeFeedback('Enter a paycheck amount first', 'var(--warning)'); return; }
+    if (!_incomeSplits.length) { showIncomeFeedback('Add at least one split row', 'var(--warning)'); return; }
+    const src = (document.getElementById('incSrc').value || 'Paycheck').trim();
+    let deposited = 0;
+    _incomeSplits.forEach(row => {
+      const pct = Number(row.pct) || 0;
+      if (!pct) return;
+      const amtCHF = net * (pct / 100);
+      const items = storeGet('nw:' + row.catKey) || [];
+      if (items[row.itemIdx]) {
+        items[row.itemIdx].amount = (Number(items[row.itemIdx].amount) || 0) + amtCHF;
+        storeSet('nw:' + row.catKey, items);
+        logActivity(row.catKey, items[row.itemIdx].name, amtCHF, 'paycheck');
+        deposited += amtCHF;
+      }
+    });
+    renderAllNetWorth();
+    showIncomeFeedback('✓ Logged ' + fmtMoney(deposited) + ' from ' + src);
+  };
+
+  (function initIncomeSection() {
+    const cfg = storeGet(INCOME_KEY);
+    if (cfg) loadIncomeCfg(cfg);
+    const preTaxCb = document.getElementById('incPreTax');
+    if (preTaxCb) {
+      preTaxCb.addEventListener('change', () => {
+        const wrap = document.getElementById('incTaxRateWrap');
+        if (wrap) wrap.style.display = preTaxCb.checked ? '' : 'none';
+        updateIncomePreview();
+      });
+    }
+    ['incGross', 'incFreq', 'incTaxRate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.addEventListener('input', updateIncomePreview); el.addEventListener('change', updateIncomePreview); }
+    });
+  })();
 
 })();
 </script>
