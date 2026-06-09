@@ -347,7 +347,8 @@ select.form-input { cursor: pointer; }
   const TOKEN_KEY     = 'google_access_token';
   const REFRESH_KEY   = 'google_refresh_token';
   const TOKEN_EXP_KEY = 'google_token_exp';
-  const CAL_BASE      = 'https://www.googleapis.com/calendar/v3';
+  // API calls go through a same-origin Vercel proxy to avoid CORS preflight failures
+  const CAL_BASE      = '/api/cal-proxy';
 
   // Google Calendar colorId → hex
   const GCOLOR = {
@@ -386,35 +387,13 @@ select.form-input { cursor: pointer; }
     const doFetch = t => {
       const fo = { method: opts.method || 'GET', headers: { Authorization: 'Bearer ' + t, Accept: 'application/json' } };
       if (opts.body) { fo.headers['Content-Type'] = 'application/json'; fo.body = JSON.stringify(opts.body); }
-      // [DIAG-3] Log every outgoing Calendar API request
-      console.log('[CAL-DIAG 3] fetch →', opts.method || 'GET', url,
-        '| token prefix:', t ? t.slice(0, 20) + '…' : null);
       return fetch(url, fo);
     };
-    let r;
-    try {
-      r = await doFetch(tok);
-    } catch (netErr) {
-      // [DIAG-4] Network-level error — fetch() itself threw (not an HTTP error)
-      console.error('[CAL-DIAG 4] NETWORK ERROR from fetch():', netErr,
-        '\n  URL:', url,
-        '\n  Error name:', netErr.name,
-        '\n  Error message:', netErr.message,
-        '\n  This means the browser could not complete the HTTP request.');
-      throw netErr;
-    }
-    // [DIAG-5] Log the HTTP response status
-    console.log('[CAL-DIAG 5] HTTP', r.status, '←', url);
+    let r = await doFetch(tok);
     if (r.status === 401) {
       tok = await refreshAccessToken();
       if (!tok) throw new Error('token_expired');
-      try {
-        r = await doFetch(tok);
-      } catch (netErr) {
-        console.error('[CAL-DIAG 4b] NETWORK ERROR on retry:', netErr);
-        throw netErr;
-      }
-      console.log('[CAL-DIAG 5b] retry HTTP', r.status, '←', url);
+      r = await doFetch(tok);
     }
     if (r.status === 403) {
       localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(REFRESH_KEY); localStorage.removeItem(TOKEN_EXP_KEY);
@@ -429,7 +408,7 @@ select.form-input { cursor: pointer; }
   let calendarMap = {};
 
   async function loadCalendars() {
-    const data = await gFetch(CAL_BASE + '/calendarList');
+    const data = await gFetch(CAL_BASE + '?path=/calendarList');
     calendarMap = {};
     for (const cal of (data.items || [])) {
       const color = cal.backgroundColor || GCOLOR[cal.colorId] || '#1A73E8';
@@ -447,7 +426,7 @@ select.form-input { cursor: pointer; }
       singleEvents: 'true', orderBy: 'startTime', maxResults: '100',
     });
     const results = await Promise.allSettled(
-      calIds.map(id => gFetch(`${CAL_BASE}/calendars/${encodeURIComponent(id)}/events?${params}`))
+      calIds.map(id => gFetch(`${CAL_BASE}?path=/calendars/${encodeURIComponent(id)}/events&${params}`))
     );
     const events = [];
     results.forEach((r, i) => {
@@ -530,7 +509,7 @@ select.form-input { cursor: pointer; }
         if (!confirm('Delete this event from your calendar?')) return;
         btn.disabled = true;
         try {
-          await gFetch(`${CAL_BASE}/calendars/${encodeURIComponent(calid)}/events/${encodeURIComponent(evid)}`, { method: 'DELETE' });
+          await gFetch(`${CAL_BASE}?path=/calendars/${encodeURIComponent(calid)}/events/${encodeURIComponent(evid)}`, { method: 'DELETE' });
           const row = btn.closest('.cal-event-row');
           row.style.transition = 'opacity 0.2s, transform 0.2s';
           row.style.opacity = '0'; row.style.transform = 'translateX(12px)';
@@ -596,13 +575,6 @@ select.form-input { cursor: pointer; }
       populateCalSelect();
       markUpdated();
     } catch (e) {
-      // [DIAG-6] Full error details from the calendar data load
-      console.error('[CAL-DIAG 6] refreshData caught error:', {
-        message: e.message,
-        name:    e.name,
-        stack:   e.stack,
-        full:    e,
-      });
       if (['not_authed','token_expired','scope_error'].includes(e.message)) {
         showNotConnected();
       } else {
@@ -633,24 +605,9 @@ select.form-input { cursor: pointer; }
 
   // ── Init ───────────────────────────────────────────────────
   async function init() {
-    // [DIAG-1] Token state on page load
-    const _rawTok = localStorage.getItem(TOKEN_KEY);
-    const _rawExp = localStorage.getItem(TOKEN_EXP_KEY);
-    const _rawRt  = localStorage.getItem(REFRESH_KEY);
-    console.log('[CAL-DIAG 1] Token state on load:', {
-      hasAccessToken: !!_rawTok,
-      tokenPreview:   _rawTok ? _rawTok.slice(0, 20) + '…' : null,
-      hasRefreshToken: !!_rawRt,
-      expiryRaw:      _rawExp,
-      expiryDate:     _rawExp ? new Date(+_rawExp).toISOString() : null,
-      isExpiredNow:   _rawExp ? Date.now() > +_rawExp : 'no exp set',
-    });
-
     let tok = getToken();
     if (!tok) tok = await refreshAccessToken();
-    console.log('[CAL-DIAG 2] Token after refresh attempt:', tok ? tok.slice(0, 20) + '…' : null);
     if (!tok) {
-      console.log('[CAL-DIAG 2a] No token — showing not-connected state');
       // notConnected card is already visible by default
       return;
     }
@@ -691,7 +648,7 @@ select.form-input { cursor: pointer; }
         const start = new Date(dtVal);
         const end   = new Date(start.getTime() + 60 * 60 * 1000);
         const tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        await gFetch(`${CAL_BASE}/calendars/${encodeURIComponent(calId)}/events`, {
+        await gFetch(`${CAL_BASE}?path=/calendars/${encodeURIComponent(calId)}/events`, {
           method: 'POST',
           body: {
             summary: title,
