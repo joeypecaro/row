@@ -646,6 +646,56 @@ html, body { scrollbar-width: none; -ms-overflow-style: none; }
   max-width: 140px;
   margin-top: 4px;
 }
+/* Grouped account sections in Stocks tab */
+.st-acct-section {
+  margin-bottom: 18px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(107,227,164,0.22);
+}
+.st-acct-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px 7px;
+}
+.st-acct-hdr-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-acct-hdr-total {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--success);
+  white-space: nowrap;
+}
+.st-acct-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 2px 2px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.st-acct-add-input {
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: rgba(255,255,255,0.05);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+.st-acct-add-input:focus { border-color: rgba(107,227,164,0.40); }
+.st-acct-add-input::placeholder { color: var(--text-tertiary); }
 
 .nw-subcard {
   background: rgba(255,255,255,0.025) !important;
@@ -2285,44 +2335,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <div id="stUpdated" style="font-size:11px;color:var(--text-quaternary);margin-bottom:14px"></div>
     <div id="stError" style="display:none;padding:8px 12px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.20);border-radius:8px;font-size:11px;color:var(--danger);margin-bottom:10px;line-height:1.5"></div>
 
-    <!-- brokerage accounts -->
+    <!-- add brokerage account -->
     <div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary)">Brokerage Accounts</span>
         <span style="font-size:10px;color:var(--text-quaternary)">auto-synced to Net Worth</span>
       </div>
-      <div id="stBrokList"></div>
-      <div class="quick-add" style="gap:6px;margin-top:6px;border-top:none;padding-top:0">
-        <input type="text" id="stBrokName" placeholder="Add account (e.g. Fidelity, Schwab)" style="flex:1" />
-        <button class="quick-add-btn" onclick="window.__stAddBrokerage()">+ Add</button>
+      <div class="quick-add" style="gap:6px;border-top:none;padding-top:0">
+        <input type="text" id="stBrokName" placeholder="New account name (e.g. Fidelity, Schwab)" style="flex:1" />
+        <button class="quick-add-btn" onclick="window.__stAddBrokerage()">+ Add Account</button>
       </div>
     </div>
 
-    <!-- holdings list -->
-    <div style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-tertiary)">Holdings</span>
-        <span id="stHoldCount" style="font-size:11px;color:var(--text-quaternary)"></span>
-      </div>
-      <div id="stHoldList"></div>
-      <div id="stHoldEmpty" class="empty-state">No holdings yet — add your first position below.</div>
-    </div>
+    <!-- grouped accounts + holdings (rendered by stRenderGrouped) -->
+    <div id="stGroupedList"></div>
 
-    <!-- add form -->
-    <div class="quick-add" style="flex-wrap:wrap;gap:6px">
-      <input type="text"   id="stTicker" placeholder="Ticker (e.g. AAPL)" maxlength="12" autocapitalize="characters"
-             style="flex:0 0 110px;font-family:var(--font-mono);text-transform:uppercase;font-weight:600;letter-spacing:0.03em" />
-      <input type="number" id="stShares" placeholder="Shares" step="0.0001" min="0" style="flex:0 0 90px" />
-      <input type="number" id="stCost"   placeholder="Cost/sh USD (opt)" step="0.01" min="0" style="flex:1;min-width:100px" />
-      <select id="stAccount" style="flex:1;min-width:120px;padding:6px 10px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:12px;font-family:inherit;background:var(--bg-card);color:var(--text-primary)">
-        <option value="">No account</option>
-      </select>
-      <button class="quick-add-btn" onclick="window.__stAdd()">+ Add</button>
-    </div>
     <div id="stFeedback" style="font-size:12px;min-height:16px;margin-top:7px"></div>
     <div style="font-size:11px;color:var(--text-quaternary);margin-top:4px;line-height:1.5">
       Requires <code style="font-size:10px;background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px">FINNHUB_API_KEY</code>
-      in Vercel env vars. Each holding's value is summed by brokerage account and shown in Net Worth automatically.
+      in Vercel env vars. Holdings are grouped by brokerage account and auto-synced to Net Worth.
     </div>
   </div>
 </div>
@@ -4130,56 +4161,282 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     if (!same) { storeSet('nw:stocks', newItems); renderAllNetWorth(); }
   }
 
-  // Render the brokerage account list with per-account totals
-  function stRenderBrokerages() {
-    const listEl = document.getElementById('stBrokList');
-    if (!listEl) return;
-    const brokerages = stGetBrokerages();
-    const holdings   = stGetHoldings();
-    listEl.innerHTML = '';
+  // Build a single holding row element (used by stRenderGrouped)
+  function buildStHoldingRow(h, globalIdx) {
+    const q   = _stPrices[h.ticker];
+    const dir = !q ? 'flat' : (q.c > 0 ? (q.d > 0 ? 'up' : q.d < 0 ? 'down' : 'flat') : 'flat');
+
+    const card = document.createElement('div');
+    card.className = 'st-holding-card';
+
+    const badge = document.createElement('div');
+    badge.className = 'st-ticker-badge ' + dir;
+    badge.textContent = h.ticker;
+
+    const mid = document.createElement('div');
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'st-name';
+    nameEl.textContent = h.name || h.ticker;
+    nameEl.title = 'Click to rename';
+    nameEl.addEventListener('click', () => stBeginEdit('name', nameEl, stGetHoldings(), globalIdx));
+    mid.appendChild(nameEl);
+
+    const row2 = document.createElement('div');
+    row2.className = 'st-row2';
+
+    const sharesEl = document.createElement('span');
+    sharesEl.className = 'st-editable';
+    sharesEl.textContent = stFmtShares(h.shares) + ' sh';
+    sharesEl.title = 'Click to edit';
+    sharesEl.addEventListener('click', () => stBeginEdit('shares', sharesEl, stGetHoldings(), globalIdx));
+    row2.appendChild(sharesEl);
+
+    if (q && q.c > 0) {
+      const priceEl = document.createElement('span');
+      priceEl.className = 'st-price';
+      priceEl.textContent = stFmtUsd(q.c) + '/sh';
+      row2.appendChild(priceEl);
+      const dayBadge = document.createElement('span');
+      dayBadge.className = 'st-day-badge ' + dir;
+      dayBadge.textContent = stSign(q.d) + stFmtUsd(q.d) + ' (' + stSign(q.dp) + (Number(q.dp)||0).toFixed(2) + '%)';
+      row2.appendChild(dayBadge);
+    } else if (q && q._err) {
+      const errEl = document.createElement('span');
+      errEl.style.cssText = 'color:var(--danger);font-size:11px';
+      errEl.textContent = 'Error: ' + q._err;
+      row2.appendChild(errEl);
+    } else {
+      const ph = document.createElement('span');
+      ph.style.color = 'var(--text-quaternary)';
+      ph.textContent = '—';
+      row2.appendChild(ph);
+    }
+    mid.appendChild(row2);
+
+    if (q && q.c > 0 && h.costBasisUSD > 0) {
+      const gainChf = (stUsdToChf(q.c) - stUsdToChf(h.costBasisUSD)) * h.shares;
+      const gainPct = ((q.c - h.costBasisUSD) / h.costBasisUSD) * 100;
+      const gd      = gainChf >= 0 ? 'up' : 'down';
+      const gainRow = document.createElement('div');
+      gainRow.className = 'st-gain-row';
+      const costSpan = document.createElement('span');
+      costSpan.className = 'st-editable';
+      costSpan.style.fontFamily = 'var(--font-mono)';
+      costSpan.textContent = 'cost $' + (h.costBasisUSD||0).toFixed(2) + '/sh';
+      costSpan.title = 'Click to edit';
+      costSpan.addEventListener('click', () => stBeginEdit('cost', costSpan, stGetHoldings(), globalIdx));
+      gainRow.appendChild(costSpan);
+      const g = document.createElement('span');
+      g.className = gd;
+      g.textContent = '  ' + stSign(gainChf) + fmtMoney(gainChf) + ' (' + stSign(gainPct) + gainPct.toFixed(1) + '%)';
+      gainRow.appendChild(g);
+      mid.appendChild(gainRow);
+    } else if (q && q.c > 0) {
+      const costPrompt = document.createElement('div');
+      costPrompt.className = 'st-gain-row st-editable';
+      costPrompt.style.fontStyle = 'italic';
+      costPrompt.textContent = '+ add cost basis';
+      costPrompt.addEventListener('click', () => stBeginEdit('cost', costPrompt, stGetHoldings(), globalIdx));
+      mid.appendChild(costPrompt);
+    }
+
+    const right = document.createElement('div');
+    right.style.textAlign = 'right';
+
+    if (q && q.c > 0) {
+      const valEl = document.createElement('div');
+      valEl.className = 'st-value';
+      valEl.textContent = fmtMoney(stUsdToChf(q.c) * h.shares);
+      right.appendChild(valEl);
+    }
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'st-del';
+    delBtn.textContent = '×';
+    delBtn.title = 'Remove holding';
+    delBtn.addEventListener('click', () => {
+      if (!confirm('Remove ' + h.ticker + '?')) return;
+      const updated = stGetHoldings();
+      updated.splice(globalIdx, 1);
+      stSaveHoldings(updated);
+      stRenderGrouped();
+    });
+    right.appendChild(delBtn);
+
+    card.appendChild(badge);
+    card.appendChild(mid);
+    card.appendChild(right);
+    return card;
+  }
+
+  // Render all brokerage account sections with their holdings grouped underneath
+  function stRenderGrouped() {
+    const container = document.getElementById('stGroupedList');
+    if (!container) return;
+    const brokerages  = stGetBrokerages();
+    const allHoldings = stGetHoldings();
+    container.innerHTML = '';
+
     if (!brokerages.length) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'font-size:12px;color:var(--text-quaternary);padding:4px 2px;font-style:italic;';
-      empty.textContent = 'No accounts yet — add one above, then assign holdings below';
-      listEl.appendChild(empty);
+      const msg = document.createElement('div');
+      msg.style.cssText = 'font-size:12px;color:var(--text-quaternary);padding:6px 2px 12px;font-style:italic;';
+      msg.textContent = 'Add a brokerage account above to get started.';
+      container.appendChild(msg);
+      stRenderSummary(allHoldings);
+      stAutoSyncNw();
       return;
     }
-    brokerages.forEach((name, i) => {
-      let total = 0;
-      holdings.forEach(h => {
-        if (h.nwAccount !== name) return;
-        const q = _stPrices[h.ticker];
-        if (q && q.c > 0) total += stUsdToChf(q.c) * h.shares;
+
+    // Each named account, then an "Unassigned" bucket for holdings with no account
+    const sections = [...brokerages, null];
+    sections.forEach(acctName => {
+      const isUnassigned = acctName === null;
+      const acctHoldings = [];
+      allHoldings.forEach((h, idx) => {
+        const inAcct = isUnassigned
+          ? (!h.nwAccount || !brokerages.includes(h.nwAccount))
+          : h.nwAccount === acctName;
+        if (inAcct) acctHoldings.push({ h, idx });
       });
-      const row = document.createElement('div');
-      row.className = 'st-brok-row';
-      const nameEl = document.createElement('span');
-      nameEl.className = 'st-brok-name';
-      nameEl.textContent = name;
-      const totEl = document.createElement('span');
-      totEl.className = 'st-brok-total';
-      totEl.textContent = total > 0 ? fmtMoney(total) : '—';
-      const del = document.createElement('button');
-      del.className = 'st-brok-del';
-      del.textContent = '×';
-      del.title = 'Remove account';
-      del.addEventListener('click', () => {
-        if (!confirm('Remove "' + name + '"? Holdings linked to it will be unassigned.')) return;
-        const updated = stGetBrokerages().filter((_, j) => j !== i);
-        stSaveBrokerages(updated);
-        // Unlink any holdings using this brokerage
-        const h2 = stGetHoldings().map(h => h.nwAccount === name ? { ...h, nwAccount: '' } : h);
-        stSaveHoldings(h2);
-        stRenderBrokerages();
-        stPopulateAcctSel();
-        stRenderHoldings();
+      if (isUnassigned && !acctHoldings.length) return;
+
+      const section = document.createElement('div');
+      section.className = 'st-acct-section';
+
+      // Account header
+      const header = document.createElement('div');
+      header.className = 'st-acct-hdr';
+
+      if (!isUnassigned) {
+        let total = 0;
+        acctHoldings.forEach(({ h }) => {
+          const q = _stPrices[h.ticker];
+          if (q && q.c > 0) total += stUsdToChf(q.c) * h.shares;
+        });
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'st-acct-hdr-name';
+        nameSpan.textContent = acctName;
+        const totSpan = document.createElement('span');
+        totSpan.className = 'st-acct-hdr-total';
+        totSpan.textContent = total > 0 ? fmtMoney(total) : '—';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'st-brok-del';
+        delBtn.textContent = '×';
+        delBtn.title = 'Remove account';
+        delBtn.addEventListener('click', () => {
+          if (!confirm('Remove "' + acctName + '"? Its holdings will move to Unassigned.')) return;
+          stSaveBrokerages(stGetBrokerages().filter(b => b !== acctName));
+          stSaveHoldings(stGetHoldings().map(h => h.nwAccount === acctName ? { ...h, nwAccount: '' } : h));
+          stRenderGrouped();
+          stPopulateAcctSel();
+        });
+        header.appendChild(nameSpan);
+        header.appendChild(totSpan);
+        header.appendChild(delBtn);
+      } else {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'st-acct-hdr-name';
+        nameSpan.style.color = 'var(--text-tertiary)';
+        nameSpan.textContent = 'Unassigned';
+        header.appendChild(nameSpan);
+      }
+      section.appendChild(header);
+
+      // Holdings in this account
+      acctHoldings.forEach(({ h, idx }) => {
+        section.appendChild(buildStHoldingRow(h, idx));
       });
-      row.appendChild(nameEl);
-      row.appendChild(totEl);
-      row.appendChild(del);
-      listEl.appendChild(row);
+
+      // Per-account add form (not shown for Unassigned)
+      if (!isUnassigned) {
+        const addRow = document.createElement('div');
+        addRow.className = 'st-acct-add-row';
+
+        const tickerInput = document.createElement('input');
+        tickerInput.type = 'text';
+        tickerInput.placeholder = 'Ticker';
+        tickerInput.className = 'st-acct-add-input';
+        tickerInput.maxLength = 12;
+        tickerInput.setAttribute('autocapitalize', 'characters');
+        tickerInput.style.cssText = 'flex:0 0 72px;font-family:var(--font-mono);text-transform:uppercase;font-weight:600;letter-spacing:0.03em';
+
+        const sharesInput = document.createElement('input');
+        sharesInput.type = 'number';
+        sharesInput.placeholder = 'Shares';
+        sharesInput.step = '0.0001';
+        sharesInput.min = '0';
+        sharesInput.className = 'st-acct-add-input';
+        sharesInput.style.cssText = 'flex:0 0 76px';
+
+        const costInput = document.createElement('input');
+        costInput.type = 'number';
+        costInput.placeholder = 'Cost/sh USD (opt)';
+        costInput.step = '0.01';
+        costInput.min = '0';
+        costInput.className = 'st-acct-add-input';
+        costInput.style.cssText = 'flex:1;min-width:80px';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'quick-add-btn';
+        addBtn.textContent = '+ Add';
+        addBtn.style.cssText = 'flex-shrink:0;font-size:11px;padding:5px 10px';
+
+        async function doAddToAcct() {
+          const ticker = (tickerInput.value || '').trim().toUpperCase();
+          const shares = parseFloat(sharesInput.value);
+          const costUSD = parseFloat(costInput.value) || 0;
+          if (!ticker || !/^[A-Z0-9.\-^]{1,12}$/.test(ticker)) {
+            return stSetFeedback('Enter a valid ticker symbol', 'var(--warning)');
+          }
+          if (!(shares > 0)) {
+            return stSetFeedback('Enter number of shares', 'var(--warning)');
+          }
+          stSetFeedback('Looking up ' + ticker + '…', 'var(--text-tertiary)');
+          addBtn.textContent = '…';
+          addBtn.disabled = true;
+          let name = ticker;
+          try {
+            const quotes = await stFetchPrices([ticker], true);
+            if (quotes[ticker] && quotes[ticker].name) name = quotes[ticker].name;
+            storeSet(ST_PRICE_KEY, _stPrices);
+            storeSet(ST_TS_KEY, Date.now());
+          } catch (e) {
+            stSetFeedback('Price lookup failed — added without live price', 'var(--warning)');
+          }
+          const holdings = stGetHoldings();
+          holdings.push({ ticker, name, shares, costBasisUSD: costUSD, nwAccount: acctName });
+          stSaveHoldings(holdings);
+          tickerInput.value = '';
+          sharesInput.value = '';
+          costInput.value = '';
+          stSetFeedback('✓ ' + stFmtShares(shares) + ' × ' + ticker + (name !== ticker ? ' — ' + name : '') + ' added to ' + acctName, 'var(--success)');
+          stUpdateLabel();
+          stRenderGrouped();
+        }
+
+        addBtn.addEventListener('click', doAddToAcct);
+        [tickerInput, sharesInput, costInput].forEach(inp => {
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAddToAcct(); } });
+        });
+        tickerInput.addEventListener('input', () => { tickerInput.value = tickerInput.value.toUpperCase(); });
+
+        addRow.appendChild(tickerInput);
+        addRow.appendChild(sharesInput);
+        addRow.appendChild(costInput);
+        addRow.appendChild(addBtn);
+        section.appendChild(addRow);
+      }
+
+      container.appendChild(section);
     });
+
+    stRenderSummary(allHoldings);
+    stAutoSyncNw();
   }
+
+  function stRenderBrokerages() { stRenderGrouped(); }
+  function stRenderHoldings()   { stRenderGrouped(); }
 
   window.__switchToStocksTab = function() {
     setActiveTab('stocks');
@@ -4196,9 +4453,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
     stSaveBrokerages([...existing, name]);
     if (input) input.value = '';
-    stRenderBrokerages();
+    stRenderGrouped();
     stPopulateAcctSel();
-    stRefreshCardSelects();
   };
 
   function stSetFeedback(msg, color) {
@@ -4270,166 +4526,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
   }
 
-  function stRenderHoldings() {
-    const holdings = stGetHoldings();
-    const listEl   = document.getElementById('stHoldList');
-    const emptyEl  = document.getElementById('stHoldEmpty');
-    const countEl  = document.getElementById('stHoldCount');
-    if (!listEl) return;
-
-    if (countEl) countEl.textContent = holdings.length + (holdings.length === 1 ? ' position' : ' positions');
-
-    if (!holdings.length) {
-      listEl.innerHTML = '';
-      if (emptyEl) emptyEl.style.display = 'block';
-      stRenderSummary([]);
-      return;
-    }
-    if (emptyEl) emptyEl.style.display = 'none';
-    listEl.innerHTML = '';
-
-    holdings.forEach((h, idx) => {
-      const q   = _stPrices[h.ticker];
-      const dir = !q ? 'flat' : (q.c > 0 ? (q.d > 0 ? 'up' : q.d < 0 ? 'down' : 'flat') : 'flat');
-
-      const card = document.createElement('div');
-      card.className = 'st-holding-card';
-
-      // Ticker badge
-      const badge = document.createElement('div');
-      badge.className = 'st-ticker-badge ' + dir;
-      badge.textContent = h.ticker;
-
-      // Mid column
-      const mid = document.createElement('div');
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'st-name';
-      nameEl.textContent = h.name || h.ticker;
-      nameEl.title = 'Click to rename';
-      nameEl.addEventListener('click', () => stBeginEdit('name', nameEl, holdings, idx));
-      mid.appendChild(nameEl);
-
-      const row2 = document.createElement('div');
-      row2.className = 'st-row2';
-
-      const sharesEl = document.createElement('span');
-      sharesEl.className = 'st-editable';
-      sharesEl.textContent = stFmtShares(h.shares) + ' sh';
-      sharesEl.title = 'Click to edit';
-      sharesEl.addEventListener('click', () => stBeginEdit('shares', sharesEl, holdings, idx));
-      row2.appendChild(sharesEl);
-
-      if (q && q.c > 0) {
-        const priceEl = document.createElement('span');
-        priceEl.className = 'st-price';
-        priceEl.textContent = stFmtUsd(q.c) + '/sh';
-        row2.appendChild(priceEl);
-
-        const dayBadge = document.createElement('span');
-        dayBadge.className = 'st-day-badge ' + dir;
-        dayBadge.textContent = stSign(q.d) + stFmtUsd(q.d) + ' (' + stSign(q.dp) + (Number(q.dp)||0).toFixed(2) + '%)';
-        row2.appendChild(dayBadge);
-      } else if (q && q._err) {
-        const errEl = document.createElement('span');
-        errEl.style.cssText = 'color:var(--danger);font-size:11px';
-        errEl.textContent = 'Error: ' + q._err;
-        row2.appendChild(errEl);
-      } else {
-        const ph = document.createElement('span');
-        ph.style.color = 'var(--text-quaternary)';
-        ph.textContent = '—';
-        row2.appendChild(ph);
-      }
-      mid.appendChild(row2);
-
-      if (q && q.c > 0 && h.costBasisUSD > 0) {
-        const gainChf = (stUsdToChf(q.c) - stUsdToChf(h.costBasisUSD)) * h.shares;
-        const gainPct = ((q.c - h.costBasisUSD) / h.costBasisUSD) * 100;
-        const gd      = gainChf >= 0 ? 'up' : 'down';
-        const gainRow = document.createElement('div');
-        gainRow.className = 'st-gain-row';
-
-        const costSpan = document.createElement('span');
-        costSpan.className = 'st-editable';
-        costSpan.style.fontFamily = 'var(--font-mono)';
-        costSpan.textContent = 'cost $' + (h.costBasisUSD||0).toFixed(2) + '/sh';
-        costSpan.title = 'Click to edit';
-        costSpan.addEventListener('click', () => stBeginEdit('cost', costSpan, holdings, idx));
-        gainRow.appendChild(costSpan);
-
-        const g = document.createElement('span');
-        g.className = gd;
-        g.textContent = '  ' + stSign(gainChf) + fmtMoney(gainChf) + ' (' + stSign(gainPct) + gainPct.toFixed(1) + '%)';
-        gainRow.appendChild(g);
-        mid.appendChild(gainRow);
-      } else if (q && q.c > 0) {
-        const costPrompt = document.createElement('div');
-        costPrompt.className = 'st-gain-row st-editable';
-        costPrompt.style.fontStyle = 'italic';
-        costPrompt.textContent = '+ add cost basis';
-        costPrompt.addEventListener('click', () => stBeginEdit('cost', costPrompt, holdings, idx));
-        mid.appendChild(costPrompt);
-      }
-
-      // Per-card account dropdown
-      const acctSel = document.createElement('select');
-      acctSel.className = 'st-acct-sel';
-      acctSel.dataset.current = h.nwAccount || '';
-      acctSel.title = 'Assign to brokerage account';
-      const noneOpt = document.createElement('option');
-      noneOpt.value = ''; noneOpt.textContent = '— no account —';
-      acctSel.appendChild(noneOpt);
-      stGetBrokerages().forEach(bname => {
-        const o = document.createElement('option');
-        o.value = bname; o.textContent = bname;
-        o.selected = h.nwAccount === bname;
-        acctSel.appendChild(o);
-      });
-      acctSel.addEventListener('change', () => {
-        const updated = stGetHoldings();
-        updated[idx].nwAccount = acctSel.value;
-        acctSel.dataset.current = acctSel.value;
-        stSaveHoldings(updated);
-        stAutoSyncNw();
-        stRenderBrokerages();
-      });
-      mid.appendChild(acctSel);
-
-      // Right column
-      const right = document.createElement('div');
-      right.style.textAlign = 'right';
-
-      if (q && q.c > 0) {
-        const valEl = document.createElement('div');
-        valEl.className = 'st-value';
-        valEl.textContent = fmtMoney(stUsdToChf(q.c) * h.shares);
-        right.appendChild(valEl);
-      }
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'st-del';
-      delBtn.textContent = '×';
-      delBtn.title = 'Remove holding';
-      delBtn.addEventListener('click', () => {
-        if (!confirm('Remove ' + h.ticker + '?')) return;
-        const updated = stGetHoldings();
-        updated.splice(idx, 1);
-        stSaveHoldings(updated);
-        stRenderHoldings();
-      });
-      right.appendChild(delBtn);
-
-      card.appendChild(badge);
-      card.appendChild(mid);
-      card.appendChild(right);
-      listEl.appendChild(card);
-    });
-
-    stRenderSummary(holdings);
-    stAutoSyncNw();
-    stRenderBrokerages();
-  }
 
   function stBeginEdit(field, el, holdings, idx) {
     if (el.querySelector('input')) return;
@@ -4500,56 +4596,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     }
   };
 
-  // Sync is now automatic — stAutoSyncNw() is called after every render/refresh.
-
-  window.__stAdd = async function() {
-    const ticker  = (document.getElementById('stTicker').value  || '').trim().toUpperCase();
-    const shares  = parseFloat(document.getElementById('stShares').value);
-    const costUSD = parseFloat(document.getElementById('stCost').value) || 0;
-    const nwAcct  = (document.getElementById('stAccount').value || '').trim();
-
-    if (!ticker)                              { return stSetFeedback('Enter a ticker symbol',   'var(--warning)'); }
-    if (!/^[A-Z0-9.\-^]{1,12}$/.test(ticker)){ return stSetFeedback('Invalid ticker format',  'var(--warning)'); }
-    if (isNaN(shares) || shares <= 0)         { return stSetFeedback('Enter number of shares', 'var(--warning)'); }
-
-    stSetFeedback('Looking up ' + ticker + '…', 'var(--text-tertiary)');
-    let name = ticker;
-    try {
-      const quotes = await stFetchPrices([ticker], true);
-      if (quotes[ticker] && quotes[ticker].name) name = quotes[ticker].name;
-      storeSet(ST_PRICE_KEY, _stPrices);
-      storeSet(ST_TS_KEY, Date.now());
-    } catch (e) {
-      stSetFeedback('Price lookup failed — added without live price', 'var(--warning)');
-    }
-
-    const holdings = stGetHoldings();
-    holdings.push({ ticker, name, shares, costBasisUSD: costUSD, nwAccount: nwAcct });
-    stSaveHoldings(holdings);
-
-    document.getElementById('stTicker').value  = '';
-    document.getElementById('stShares').value  = '';
-    document.getElementById('stCost').value    = '';
-    document.getElementById('stAccount').value = '';
-
-    stSetFeedback('✓ Added ' + stFmtShares(shares) + ' × ' + ticker + (name !== ticker ? ' — ' + name : ''), 'var(--success)');
-    stUpdateLabel();
-    stRenderHoldings();
-  };
-
   (function stBoot() {
     _stPrices = storeGet(ST_PRICE_KEY) || {};
     // If stocks:brokerages is empty but nw:stocks has data, recover brokerage names.
-    // This handles the case where stocks: data was wiped by a sync edge-case.
     if (!stGetBrokerages().length) {
       const nwItems = storeGet('nw:stocks') || [];
       if (nwItems.length) {
         stSaveBrokerages(nwItems.map(it => it.name));
       }
     }
-    stRenderBrokerages();
     stPopulateAcctSel();
-    stRenderHoldings();
+    stRenderGrouped();
     stUpdateLabel();
     setInterval(stUpdateLabel, 30000);
     const lastTs = storeGet(ST_TS_KEY);
