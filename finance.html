@@ -1943,14 +1943,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
           <button class="quick-add-btn" id="bankAddBtn">+</button>
         </div>
       </div>
-      <!-- Stocks / Investments -->
+      <!-- Brokerage Accounts (auto-synced from Stocks tab) -->
       <div class="card nw-subcard">
-        <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>📈 Stocks / Investments</span><span id="stocksTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
+        <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>📈 Brokerage Accounts</span><span id="stocksTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
         <div id="stocksList" class="nw-list"></div>
-        <div class="quick-add">
-          <input type="text" placeholder="Stock / fund" id="stocksName" />
-          <input type="number" placeholder="Value" id="stocksAmount" step="0.01" />
-          <button class="quick-add-btn" id="stocksAddBtn">+</button>
+        <div style="padding:6px 2px 2px;display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;color:var(--text-quaternary);font-style:italic">Values auto-synced from</span>
+          <button onclick="window.__switchToStocksTab()" style="background:none;border:none;padding:0;font-size:11px;color:var(--accent);cursor:pointer;font-family:var(--font);text-decoration:underline;text-underline-offset:2px">Stocks tab →</button>
         </div>
       </div>
       <!-- Crypto -->
@@ -2284,7 +2283,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // ============================================================
   const ORD_FROM_META = {
     bank:   { name: 'Bank',   color: '#7DD3FC' },
-    stocks: { name: 'Stocks', color: '#6EE7B7' },
+    stocks: { name: 'Brokerage Accounts', color: '#6EE7B7' },
     crypto: { name: 'Crypto', color: '#FBBF24' },
     other:  { name: 'Other',  color: '#B794F4' }
   };
@@ -2315,7 +2314,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   const CURRENCY_KEY = 'nw_currency';
   const NW_CATS = [
     { key: 'bank',   listId: 'bankList',   totalId: 'bankTotal',   nameId: 'bankName',   amtId: 'bankAmount',   addId: 'bankAddBtn' },
-    { key: 'stocks', listId: 'stocksList', totalId: 'stocksTotal', nameId: 'stocksName', amtId: 'stocksAmount', addId: 'stocksAddBtn' },
+    { key: 'stocks', listId: 'stocksList', totalId: 'stocksTotal' },
     { key: 'crypto', listId: 'cryptoList', totalId: 'cryptoTotal', nameId: 'cryptoName', amtId: 'cryptoAmount', addId: 'cryptoAddBtn' },
     { key: 'other',  listId: 'otherList',  totalId: 'otherTotal',  nameId: 'otherName',  amtId: 'otherAmount',  addId: 'otherAddBtn' }
   ];
@@ -2360,23 +2359,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const row = document.createElement('div');
       row.className = 'nw-row';
       const name = document.createElement('span');
-      name.className = 'nw-name nw-name-edit';
-      name.textContent = it.name;
-      name.title = 'Tap to rename';
-      name.addEventListener('click', () => beginNwNameEdit(name, items, idx, cat.key));
       const amt = document.createElement('span');
-      amt.className = 'nw-amt nw-amt-edit';
-      amt.textContent = fmtMoney(it.amount);
-      amt.title = 'Tap to edit · type +500 to add, -200 to subtract, or a new total';
-      amt.addEventListener('click', () => beginNwAmountEdit(amt, items, idx, cat.key));
-      const del = document.createElement('button'); del.className = 'nw-del'; del.textContent = '×';
-      del.addEventListener('click', () => {
-        const removed = items[idx];
-        items.splice(idx, 1); storeSet('nw:' + cat.key, items);
-        if (removed) logActivity(cat.key, removed.name, -(Number(removed.amount) || 0), 'delete');
-        renderAllNetWorth();
-      });
-      row.appendChild(name); row.appendChild(amt); row.appendChild(del);
+      if (cat.key === 'stocks') {
+        // Read-only — values auto-synced from Stocks tab
+        name.className = 'nw-name';
+        name.textContent = it.name;
+        amt.className = 'nw-amt';
+        amt.textContent = fmtMoney(it.amount);
+        row.appendChild(name); row.appendChild(amt);
+      } else {
+        name.className = 'nw-name nw-name-edit';
+        name.textContent = it.name;
+        name.title = 'Tap to rename';
+        name.addEventListener('click', () => beginNwNameEdit(name, items, idx, cat.key));
+        amt.className = 'nw-amt nw-amt-edit';
+        amt.textContent = fmtMoney(it.amount);
+        amt.title = 'Tap to edit · type +500 to add, -200 to subtract, or a new total';
+        amt.addEventListener('click', () => beginNwAmountEdit(amt, items, idx, cat.key));
+        const del = document.createElement('button'); del.className = 'nw-del'; del.textContent = '×';
+        del.addEventListener('click', () => {
+          const removed = items[idx];
+          items.splice(idx, 1); storeSet('nw:' + cat.key, items);
+          if (removed) logActivity(cat.key, removed.name, -(Number(removed.amount) || 0), 'delete');
+          renderAllNetWorth();
+        });
+        row.appendChild(name); row.appendChild(amt); row.appendChild(del);
+      }
       list.appendChild(row);
       if (cat.key === 'bank') {
         const apy = Number(it.apy) || 0;
@@ -2577,7 +2585,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // ============================================================
   const NW_SLICE_META = {
     bank:   { name: 'Bank',     color: '#7DD3FC' },
-    stocks: { name: 'Stocks',   color: '#6EE7B7' },
+    stocks: { name: 'Brokerage Accounts', color: '#6EE7B7' },
     crypto: { name: 'Crypto',   color: '#FBBF24' },
     other:  { name: 'Other',    color: '#B794F4' },
     subs:   { name: 'Subs/yr',  color: '#FF8A8A' }
@@ -3856,7 +3864,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   // Auto-sync brokerage totals into nw:stocks
   function stAutoSyncNw() {
     const brokerages = stGetBrokerages();
-    if (!brokerages.length) return;
     const holdings = stGetHoldings();
     const totals = {};
     brokerages.forEach(name => { totals[name] = 0; });
@@ -3865,17 +3872,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       const q = _stPrices[h.ticker];
       if (q && q.c > 0) totals[h.nwAccount] += stUsdToChf(q.c) * h.shares;
     });
-    const items = storeGet('nw:stocks') || [];
-    let changed = false;
-    Object.entries(totals).forEach(([name, chf]) => {
-      const existing = items.find(it => it.name === name);
-      if (existing) {
-        if (Math.abs((existing.amount || 0) - chf) > 0.001) { existing.amount = chf; changed = true; }
-      } else {
-        items.push({ name, amount: chf }); changed = true;
-      }
-    });
-    if (changed) { storeSet('nw:stocks', items); renderAllNetWorth(); }
+    // Fully replace nw:stocks so orphan/manual items don't persist
+    const newItems = Object.entries(totals).map(([name, chf]) => ({ name, amount: chf }));
+    const prev = storeGet('nw:stocks') || [];
+    const same = newItems.length === prev.length &&
+      newItems.every((it, i) => it.name === (prev[i] && prev[i].name) && Math.abs(it.amount - (prev[i].amount || 0)) < 0.001);
+    if (!same) { storeSet('nw:stocks', newItems); renderAllNetWorth(); }
   }
 
   // Render the brokerage account list with per-account totals
@@ -3928,6 +3930,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       listEl.appendChild(row);
     });
   }
+
+  window.__switchToStocksTab = function() {
+    setActiveTab('stocks');
+  };
 
   window.__stAddBrokerage = function() {
     const input = document.getElementById('stBrokName');
