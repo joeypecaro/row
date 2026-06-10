@@ -270,9 +270,22 @@
 (function(){
   'use strict';
 
-  // ===== Config — adjust if your project uses different keys =====
-  var PROXY = '/api/health-proxy';                  // existing Vercel serverless proxy
-  var TOKEN_KEYS = ['google_access_token','gh_access_token','access_token','googleToken'];
+  // ===== Config =====
+  var PROXY            = '/api/health-proxy';
+  var HEALTH_CLIENT_ID = '346851682856-fc9hou4644upor52m9ohjpvsuvlj3rjc.apps.googleusercontent.com';
+  var HEALTH_SCOPES    = [
+    'https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly',
+    'https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly',
+    'https://www.googleapis.com/auth/googlehealth.sleep.readonly',
+    'https://www.googleapis.com/auth/googlehealth.nutrition.readonly',
+    'https://www.googleapis.com/auth/googlehealth.profile.readonly',
+  ].join(' ');
+  // Health token is stored separately so it NEVER mixes with Calendar/Gmail scopes.
+  // Google Health API rejects tokens that also contain non-health scopes.
+  var HEALTH_TOKEN_KEY   = 'gh_health_only_token';
+  var HEALTH_REFRESH_KEY = 'gh_health_refresh_token';
+  var HEALTH_EXP_KEY     = 'gh_health_token_exp';
+  var HEALTH_REDIRECT    = 'https://row-rho-seven.vercel.app/fitbit.html';
   var GOALS = { steps: 10000, sleepHrs: 8, activeMin: 30 };
 
   // ===== DOM =====
@@ -282,11 +295,8 @@
 
   // ===== Token helpers =====
   function getToken(){
-    for (var i=0;i<TOKEN_KEYS.length;i++){
-      var v = localStorage.getItem(TOKEN_KEYS[i]);
-      if (v) return v.replace(/^"|"$/g,'');
-    }
-    return null;
+    var v = localStorage.getItem(HEALTH_TOKEN_KEY);
+    return v ? v.replace(/^"|"$/g,'') : null;
   }
 
   // ===== Date helpers =====
@@ -585,11 +595,81 @@
   }
 
   // ===== Auth =====
+
+  // Initiate health-only OAuth — ONLY googlehealth scopes, nothing else.
   function startAuth(){
-    window.location.href = 'settings.html';
+    var state = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID() : Math.random().toString(36).slice(2,18);
+    sessionStorage.setItem('health_oauth_state', state);
+    var statusEl = $('hxAuthStatus');
+    if (statusEl) statusEl.textContent = 'Redirecting to Google…';
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: HEALTH_CLIENT_ID,
+      redirect_uri: HEALTH_REDIRECT,
+      response_type: 'code',
+      scope: HEALTH_SCOPES,
+      access_type: 'offline',
+      prompt: 'consent',
+      state: state,
+    });
   }
+
+  // Handle the OAuth callback when Google redirects back to fitbit.html?code=...
+  function handleHealthCallback(){
+    var params = new URLSearchParams(window.location.search);
+    var code = params.get('code');
+    if (!code) return Promise.resolve(false);
+    var state = params.get('state');
+    var saved = sessionStorage.getItem('health_oauth_state');
+    sessionStorage.removeItem('health_oauth_state');
+    // Wipe code from URL immediately regardless of state match
+    history.replaceState(null, '', window.location.pathname);
+    if (state !== saved) return Promise.resolve(false);
+    var statusEl = $('hxAuthStatus');
+    if (statusEl) statusEl.textContent = 'Connecting…';
+    return fetch('/api/google-token', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ code: code, redirect_uri: HEALTH_REDIRECT }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.access_token){
+        if (statusEl) statusEl.textContent = 'Connection failed — try again.';
+        return false;
+      }
+      localStorage.setItem(HEALTH_TOKEN_KEY, d.access_token);
+      localStorage.setItem(HEALTH_EXP_KEY, String(Date.now() + (d.expires_in||3600)*1000));
+      if (d.refresh_token) localStorage.setItem(HEALTH_REFRESH_KEY, d.refresh_token);
+      return true;
+    })
+    .catch(function(){
+      if (statusEl) statusEl.textContent = 'Connection error — try again.';
+      return false;
+    });
+  }
+
+  // Silent token refresh using the health-only refresh token
+  function tryHealthRefresh(){
+    var rt = localStorage.getItem(HEALTH_REFRESH_KEY);
+    if (!rt) return Promise.resolve(null);
+    return fetch('/api/google-refresh', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ refresh_token: rt }),
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.access_token) return null;
+      localStorage.setItem(HEALTH_TOKEN_KEY, d.access_token);
+      localStorage.setItem(HEALTH_EXP_KEY, String(Date.now() + (d.expires_in||3600)*1000));
+      return d.access_token;
+    })
+    .catch(function(){ return null; });
+  }
+
   function disconnect(){
-    TOKEN_KEYS.forEach(function(k){ localStorage.removeItem(k); });
+    localStorage.removeItem(HEALTH_TOKEN_KEY);
+    localStorage.removeItem(HEALTH_REFRESH_KEY);
+    localStorage.removeItem(HEALTH_EXP_KEY);
     showState(false);
   }
 
@@ -603,32 +683,19 @@
   $('hxDisconnectBtn').addEventListener('click', disconnect);
   $('hxRefreshBtn').addEventListener('click', loadData);
 
-  (function initAuth(){
+  handleHealthCallback().then(function(){
     var tok = getToken();
     if (!tok) { showState(false); return; }
 
-    // Check expiry (settings.html stores google_token_exp)
-    var exp = parseInt(localStorage.getItem('google_token_exp')||'0', 10);
+    var exp = parseInt(localStorage.getItem(HEALTH_EXP_KEY)||'0', 10);
     if (!exp || Date.now() <= exp) { showState(true); loadData(); return; }
 
-    // Token expired — try silent refresh before giving up
-    var rt = localStorage.getItem('google_refresh_token');
-    if (!rt) { showState(false); return; }
-
-    fetch('/api/google-refresh', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({refresh_token: rt})
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.access_token){
-        localStorage.setItem('google_access_token', d.access_token);
-        localStorage.setItem('google_token_exp', String(Date.now()+(d.expires_in||3600)*1000));
-      }
-      showState(true); loadData();
-    })
-    .catch(function(){ showState(true); loadData(); });
-  })();
+    // Token expired — try silent refresh before showing disconnected
+    tryHealthRefresh().then(function(newTok){
+      if (newTok) { showState(true); loadData(); }
+      else { showState(false); }
+    });
+  });
 })();
 </script>
 </body>
