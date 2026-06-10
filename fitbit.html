@@ -448,20 +448,30 @@
     $('hxVerdict').style.display='block';
   }
 
-  // ===== Identity / scope check =====
-  // Call /identity first — if it 401/403s, the token lacks googlehealth scopes.
-  // Result appears in browser console AND Vercel function logs.
-  function checkIdentity(){
+  // ===== Scope check via Google tokeninfo =====
+  // Calls Google's public tokeninfo endpoint (no proxy needed, no CORS issue).
+  // Logs exactly which scopes the current token has been granted.
+  // If googlehealth scopes are absent → OAuth didn't grant them → reconnect in settings.
+  // If googlehealth scopes ARE present → issue is purely in the API path/filter.
+  function checkScopes(){
     var token = getToken();
-    return fetch(PROXY + '?path=/identity', {
-      headers: token ? { 'Authorization':'Bearer '+token } : {}
-    })
-    .then(function(r){ return r.json().then(function(j){ return {status:r.status,body:j}; }); })
-    .then(function(result){
-      console.log('[HEALTH] identity status:', result.status, JSON.stringify(result.body));
-      return result.status === 200;
-    })
-    .catch(function(e){ console.error('[HEALTH] identity error:', e.message); return false; });
+    if (!token) { console.warn('[HEALTH] checkScopes: no token found'); return Promise.resolve(false); }
+    return fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token))
+      .then(function(r){ return r.json(); })
+      .then(function(info){
+        console.log('[HEALTH] tokeninfo:', JSON.stringify(info));
+        var granted = (info.scope || '').split(' ');
+        var health = granted.filter(function(s){ return s.indexOf('googlehealth') !== -1; });
+        if (health.length) {
+          console.log('[HEALTH] googlehealth scopes IN TOKEN:', health);
+          return true;
+        } else {
+          console.warn('[HEALTH] NO googlehealth scopes in token. Full scope list:', granted);
+          console.warn('[HEALTH] → Disconnect and reconnect Google in settings to force a new consent.');
+          return false;
+        }
+      })
+      .catch(function(e){ console.error('[HEALTH] tokeninfo error:', e.message); return false; });
   }
 
   // ===== Load all data =====
@@ -472,10 +482,10 @@
     var startToday=iso(todayStart()), endToday=iso(tomorrowStart());
     var start30=iso(daysAgo(30));
 
-    // Run identity check in parallel with data fetches — result lands in console
-    checkIdentity().then(function(ok){
-      if (!ok) console.warn('[HEALTH] identity check FAILED — token likely missing googlehealth scopes. Reconnect Google in settings.');
-      else console.log('[HEALTH] identity check PASSED — token and scopes are valid');
+    // Scope check — result shows in browser console within ~1 second
+    checkScopes().then(function(ok){
+      if (!ok) console.warn('[HEALTH] SCOPE CHECK FAILED — no googlehealth scopes in token. Disconnect + reconnect in settings.');
+      else console.log('[HEALTH] SCOPE CHECK PASSED — token has googlehealth scopes');
     });
 
     var calls = [
