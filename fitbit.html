@@ -330,7 +330,10 @@
           try { return JSON.parse(body); } catch(x) { return {}; }
         });
       })
-      .then(function(j){ return j.dataPoints || []; });
+      .then(function(j){
+        console.log('[HEALTH] FULL ' + dataTypeKebab + ':', JSON.stringify(j));
+        return j.dataPoints || [];
+      });
   }
 
   // ===== Parsers (defensive — try multiple field names) =====
