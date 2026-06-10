@@ -408,7 +408,7 @@ select.form-input { cursor: pointer; }
   let calendarMap = {};
 
   async function loadCalendars() {
-    const data = await gFetch(CAL_BASE + '?path=/calendarList');
+    const data = await gFetch(CAL_BASE + '?path=/users/me/calendarList');
     calendarMap = {};
     for (const cal of (data.items || [])) {
       const color = cal.backgroundColor || GCOLOR[cal.colorId] || '#1A73E8';
