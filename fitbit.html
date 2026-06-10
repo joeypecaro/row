@@ -552,10 +552,7 @@
 
   // ===== Auth =====
   function startAuth(){
-    // Reuse the project's existing Google connect flow if present.
-    if (typeof window.connectGoogle === 'function') { window.connectGoogle(); return; }
-    if (typeof window.startGoogleAuth === 'function') { window.startGoogleAuth(); return; }
-    $('hxAuthStatus').textContent = 'Connect Google from your dashboard settings, then return here.';
+    window.location.href = 'settings.html';
   }
   function disconnect(){
     TOKEN_KEYS.forEach(function(k){ localStorage.removeItem(k); });
@@ -572,8 +569,32 @@
   $('hxDisconnectBtn').addEventListener('click', disconnect);
   $('hxRefreshBtn').addEventListener('click', loadData);
 
-  if (getToken()) { showState(true); loadData(); }
-  else { showState(false); }
+  (function initAuth(){
+    var tok = getToken();
+    if (!tok) { showState(false); return; }
+
+    // Check expiry (settings.html stores google_token_exp)
+    var exp = parseInt(localStorage.getItem('google_token_exp')||'0', 10);
+    if (!exp || Date.now() <= exp) { showState(true); loadData(); return; }
+
+    // Token expired — try silent refresh before giving up
+    var rt = localStorage.getItem('google_refresh_token');
+    if (!rt) { showState(false); return; }
+
+    fetch('/api/google-refresh', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({refresh_token: rt})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.access_token){
+        localStorage.setItem('google_access_token', d.access_token);
+        localStorage.setItem('google_token_exp', String(Date.now()+(d.expires_in||3600)*1000));
+      }
+      showState(true); loadData();
+    })
+    .catch(function(){ showState(true); loadData(); });
+  })();
 })();
 </script>
 </body>
