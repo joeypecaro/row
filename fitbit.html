@@ -234,10 +234,9 @@
       </div>
 
       <!-- Biomarker strip -->
-      <div class="hx-bio">
+      <div class="hx-bio" style="grid-template-columns:repeat(2,1fr)">
         <div class="hx-bio-item"><span class="hx-bio-label">Avg steps</span><span class="hx-bio-val" id="hxAvgSteps">—</span></div>
         <div class="hx-bio-item"><span class="hx-bio-label">Avg sleep</span><span class="hx-bio-val" id="hxAvgSleep">—</span></div>
-        <div class="hx-bio-item"><span class="hx-bio-label">Weight</span><span class="hx-bio-val" id="hxWeight">—</span></div>
       </div>
 
       <!-- Charts -->
@@ -302,6 +301,8 @@
   // ===== Date helpers =====
   // Strip milliseconds — some Google Health API filters reject .000Z form
   function iso(d){ return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+  // Plain date (YYYY-MM-DD) — required for Daily record type filters (no T, no Z)
+  function plainDate(d){ return d.toISOString().slice(0,10); }
   function daysAgo(n){ var d=new Date(); d.setUTCDate(d.getUTCDate()-n); d.setUTCHours(0,0,0,0); return d; }
   function todayStart(){ var d=new Date(); d.setUTCHours(0,0,0,0); return d; }
   function tomorrowStart(){ var d=todayStart(); d.setUTCDate(d.getUTCDate()+1); return d; }
@@ -493,21 +494,21 @@
     hideBanner();
     var btn=$('hxRefreshBtn'); if(btn) btn.classList.add('spinning');
     var start7=iso(daysAgo(6)), now=iso(new Date());
-    var startToday=iso(todayStart()), endToday=iso(tomorrowStart());
-    var start30=iso(daysAgo(30));
-
-    // Scope check — result shows in browser console within ~1 second
-    checkScopes().then(function(ok){
-      if (!ok) console.warn('[HEALTH] SCOPE CHECK FAILED — no googlehealth scopes in token. Disconnect + reconnect in settings.');
-      else console.log('[HEALTH] SCOPE CHECK PASSED — token has googlehealth scopes');
-    });
+    // Daily record types require plain date strings (no T, no Z)
+    var date7=plainDate(daysAgo(6)), dateTomorrow=plainDate(tomorrowStart());
 
     var calls = [
-      gFetch('steps', 'steps.interval.start_time >= "'+start7+'" AND steps.interval.start_time < "'+now+'"', 1000),
-      gFetch('daily-resting-heart-rate', 'daily_resting_heart_rate.date >= "'+start7+'" AND daily_resting_heart_rate.date < "'+now+'"', 100),
-      gFetch('sleep', 'sleep.interval.start_time >= "'+start7+'" AND sleep.interval.start_time < "'+now+'"', 100),
-      gFetch('active-minutes', 'active_minutes.interval.start_time >= "'+start7+'" AND active_minutes.interval.start_time < "'+now+'"', 1000),
-      gFetch('weight', 'weight.measurement_time.physical_time >= "'+start30+'" AND weight.measurement_time.physical_time < "'+now+'"', 100)
+      gFetch('steps',
+        'steps.interval.start_time >= "'+start7+'" AND steps.interval.start_time < "'+now+'"', 1000),
+      // Daily type: filter uses plain date, not ISO timestamp
+      gFetch('daily-resting-heart-rate',
+        'daily_resting_heart_rate.date >= "'+date7+'" AND daily_resting_heart_rate.date < "'+dateTomorrow+'"', 100),
+      // Session type: filter uses session.start_time with Z
+      gFetch('sleep',
+        'sleep.session.start_time >= "'+start7+'" AND sleep.session.start_time < "'+now+'"', 100),
+      // Interval type: interval.start_time with Z
+      gFetch('active-minutes',
+        'active_minutes.interval.start_time >= "'+start7+'" AND active_minutes.interval.start_time < "'+now+'"', 1000),
     ];
 
     Promise.allSettled(calls).then(function(res){
@@ -519,17 +520,26 @@
       var rhrPts   = res[1].status==='fulfilled'? res[1].value : [];
       var sleepPts = res[2].status==='fulfilled'? res[2].value : [];
       var actPts   = res[3].status==='fulfilled'? res[3].value : [];
-      var wtPts    = res[4].status==='fulfilled'? res[4].value : [];
 
       // Steps: count field is steps.count (string)
       var stepsDaily = dailyReduce(stepsPts, 'steps', function(b){ return num(b.count!=null?b.count:(b.value!=null?b.value:0)); }, 'sum');
-      // RHR: daily value
+      // RHR: daily value — parse fields confirmed from raw response
       var rhrDaily = dailyReduce(rhrPts, 'dailyRestingHeartRate', function(b){ return num(b.bpm!=null?b.bpm:(b.value!=null?b.value:(b.beatsPerMinute||0))); }, 'last');
-      // Active minutes
-      var actDaily = dailyReduce(actPts, 'activeMinutes', function(b){ return num(b.minutes!=null?b.minutes:(b.count!=null?b.count:(b.value||0))); }, 'sum');
-      // Sleep: durations in seconds → hours; stages
+      // Active minutes: sum ALL activity levels per data point
+      var actDaily = dailyReduce(actPts, 'activeMinutes', function(b){
+        var levels = b.activeMinutesByActivityLevel;
+        if (levels && levels.length) {
+          return levels.reduce(function(s, l){ return s + num(l.activeMinutes||0); }, 0);
+        }
+        return num(b.minutes!=null?b.minutes:(b.count!=null?b.count:(b.value||0)));
+      }, 'sum');
+      // Sleep: duration — parse fields TBD from raw 200 response; best-effort for now
       var sleepDaily = dailyReduce(sleepPts, 'sleep', function(b){
-        var sec = num(b.durationMillis? b.durationMillis/1000 : (b.totalSleepSeconds || (b.interval && b.interval.endTime && b.interval.startTime ? (new Date(b.interval.endTime)-new Date(b.interval.startTime))/1000 : 0)));
+        var sec = num(b.durationMillis? b.durationMillis/1000 : (b.totalSleepSeconds ||
+          (b.session && b.session.endTime && b.session.startTime ?
+            (new Date(b.session.endTime)-new Date(b.session.startTime))/1000 :
+          (b.interval && b.interval.endTime && b.interval.startTime ?
+            (new Date(b.interval.endTime)-new Date(b.interval.startTime))/1000 : 0))));
         return sec/3600;
       }, 'sum');
 
@@ -541,10 +551,6 @@
       var avgSleep = avg(sleepDaily);
       var actToday = actDaily.length? actDaily[actDaily.length-1].value : 0;
       var activeDaysMet = actDaily.filter(function(d){return d.value>=GOALS.activeMin;}).length;
-
-      // Weight (latest)
-      var weight = 0, wUnit='';
-      if(wtPts.length){ var lastW=wtPts[wtPts.length-1].weight||{}; weight=num(lastW.kilograms!=null?lastW.kilograms:(lastW.value||0)); wUnit='kg'; }
 
       // Trends
       var rhrFirst=rhrDaily.find(function(d){return d.value>0;}), rhrLastV=[].concat(rhrDaily).reverse().find(function(d){return d.value>0;});
@@ -570,7 +576,6 @@
 
       $('hxAvgSteps').textContent = avgSteps? fmt(avgSteps) : '—';
       $('hxAvgSleep').textContent = avgSleep? avgSleep.toFixed(1)+'h' : '—';
-      $('hxWeight').textContent = weight? weight.toFixed(1)+' '+wUnit : '—';
 
       // ---- Charts ----
       stepsDaily.forEach(function(d){ d.zone=zSteps(d.value); });
@@ -590,8 +595,9 @@
       buildInsights({ avgSteps:avgSteps, avgSleepHrs:avgSleep, rhr:rhrToday, rhrTrend:rhrTrend, sleepTrend:sleepTrend, stepsDeclining:stepsDeclining });
 
       // ---- Empty state ----
-      var anyData = stepsToday||rhrToday||sleepLast||actToday;
-      if(!anyData && !authFail){ showBanner('No data synced yet — open the Google Health app and sync your Fitbit, then refresh.', false, false); }
+      if(!(stepsToday||rhrToday||sleepLast||actToday) && !authFail){
+        showBanner('No data synced yet — open the Google Health app and sync your Fitbit, then refresh.', false, false);
+      }
 
       elUpdated.textContent = 'synced ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     });
