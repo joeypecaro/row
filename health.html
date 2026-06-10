@@ -1853,7 +1853,7 @@ main {
       localStorage.setItem(TOKEN_KEY, d.access_token);
       localStorage.setItem(TOKEN_EXP, String(Date.now() + (d.expires_in || 3600) * 1000));
       return d.access_token;
-    } catch { return null; }
+    } catch (e) { console.error('[HEALTH] Error:', e); return null; }
   }
 
   // ── Authenticated fetch via proxy ─────────────────────────────────────────
@@ -1866,15 +1866,19 @@ main {
       return fetch(url, fo);
     };
     let r = await doFetch(tok);
+    console.log('[HEALTH] Response status:', r.status);
     if (r.status === 401) {
       tok = await refreshToken();
       if (!tok) throw new Error('token_expired');
       r = await doFetch(tok);
+      console.log('[HEALTH] Response status (retry):', r.status);
     }
     if (r.status === 403) { throw new Error('scope_error'); }
     if (r.status === 204 || (r.status === 200 && r.headers.get('content-length') === '0')) return {};
     if (!r.ok) throw new Error('api_' + r.status);
-    return r.json();
+    const data = await r.json();
+    console.log('[HEALTH] Response body:', JSON.stringify(data).substring(0, 200));
+    return data;
   }
 
   // ── Fetch one data type from Google Health API v4 (handles pagination) ───
@@ -1885,6 +1889,7 @@ main {
       const filter = `${filterField} >= "${startISO}" AND ${filterField} < "${endISO}"`;
       let url = `${HEALTH_BASE}?path=${encodeURIComponent('/users/me/dataTypes/' + dataType + '/dataPoints')}&filter=${encodeURIComponent(filter)}&pageSize=10000`;
       if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+      console.log('[HEALTH] Fetching:', url);
       const resp = await gFetch(url);
       console.log('[HEALTH] ' + dataType + ' raw:', resp);
       const pts = resp.dataPoints || resp.data_points || [];
@@ -2032,6 +2037,7 @@ main {
   async function init() {
     let tok = getToken();
     if (!tok) tok = await refreshToken();
+    console.log('[HEALTH] Token stored:', tok?.substring(0, 20));
     if (!tok) { showState('healthNotConnected'); return; }
     showState('healthSection');
 
