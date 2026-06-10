@@ -317,8 +317,8 @@
   function gFetch(dataTypeKebab, filterStr, pageSize){
     var token = getToken();
     var qs = 'path=' + encodeURIComponent('/dataTypes/'+dataTypeKebab+'/dataPoints')
-           + '&filter=' + encodeURIComponent(filterStr)
            + '&pageSize=' + (pageSize||1000);
+    if (filterStr) qs += '&filter=' + encodeURIComponent(filterStr);
     var url = PROXY + '?' + qs;
     console.log('[HEALTH] →', dataTypeKebab, url);
     return fetch(url, { headers: token ? { 'Authorization':'Bearer '+token } : {} })
@@ -339,24 +339,34 @@
       });
   }
 
-  // ===== Parsers (defensive — try multiple field names) =====
+  // ===== Parsers =====
   function num(v){ var n = typeof v==='string' ? parseFloat(v) : v; return isFinite(n) ? n : 0; }
   function pointDate(p, key){
-    // Try interval.startTime, sampleTime, civilStartTime.date, measurementTime
     var b = p[key] || {};
-    var t = (b.interval && (b.interval.startTime || b.interval.civilStartTime)) ||
-            (b.sampleTime && (b.sampleTime.physicalTime || b.sampleTime)) ||
-            (b.measurementTime && (b.measurementTime.physicalTime || b.measurementTime)) ||
-            b.date || p.startTime;
-    if (t && t.date) { return new Date(Date.UTC(t.date.year, (t.date.month||1)-1, t.date.day||1)); }
-    return t ? new Date(t) : null;
+    var d;
+    // Daily type: date is a {year, month, day} object — NEVER pass to new Date() directly
+    if (b.date && typeof b.date === 'object' && b.date.year) {
+      d = new Date(Date.UTC(b.date.year, (b.date.month || 1) - 1, b.date.day || 1));
+      if (!isNaN(d.getTime())) return d;
+    }
+    // Interval / Session types: date is an ISO string
+    var t = (b.interval  && (b.interval.startTime  || b.interval.civilStartTime)) ||
+            (b.session   && (b.session.startTime   || b.session.civilStartTime))  ||
+            (b.sampleTime && (b.sampleTime.physicalTime || b.sampleTime))         ||
+            p.startTime;
+    if (typeof t === 'string') {
+      d = new Date(t);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
   }
 
   // Group raw points into per-day totals/averages
   function dailyReduce(points, key, valueFn, mode){
     var byDay = {};
     points.forEach(function(p){
-      var d = pointDate(p, key); if(!d) return;
+      var d = pointDate(p, key);
+      if (!d || isNaN(d.getTime())) return; // skip any point with an unresolvable date
       var dk = d.toISOString().slice(0,10);
       var v = valueFn(p[key]||{}, p);
       if (byDay[dk] == null) byDay[dk] = { sum:0, count:0, last:v };
@@ -505,9 +515,8 @@
       // Daily type: filter uses plain date, not ISO timestamp
       gFetch('daily-resting-heart-rate',
         'daily_resting_heart_rate.date >= "'+date7+'" AND daily_resting_heart_rate.date < "'+dateTomorrow+'"', 100),
-      // Session type: filter uses session.start_time with Z
-      gFetch('sleep',
-        'sleep.session.start_time >= "'+start7+'" AND sleep.session.start_time < "'+now+'"', 100),
+      // Sleep session filter is rejected — fetch unfiltered and cut client-side
+      gFetch('sleep', '', 50),
       // Interval type: interval.start_time with Z
       gFetch('active-minutes',
         'active_minutes.interval.start_time >= "'+start7+'" AND active_minutes.interval.start_time < "'+now+'"', 1000),
@@ -525,8 +534,8 @@
 
       // Steps: count field is steps.count (string)
       var stepsDaily = dailyReduce(stepsPts, 'steps', function(b){ return num(b.count!=null?b.count:(b.value!=null?b.value:0)); }, 'sum');
-      // RHR: daily value — parse fields confirmed from raw response
-      var rhrDaily = dailyReduce(rhrPts, 'dailyRestingHeartRate', function(b){ return num(b.bpm!=null?b.bpm:(b.value!=null?b.value:(b.beatsPerMinute||0))); }, 'last');
+      // RHR: confirmed field is beatsPerMinute; avg mode handles FITBIT+HealthKit duplicates per day
+      var rhrDaily = dailyReduce(rhrPts, 'dailyRestingHeartRate', function(b){ return num(b.beatsPerMinute!=null?b.beatsPerMinute:(b.bpm||0)); }, 'avg');
       // Active minutes: sum ALL activity levels per data point
       var actDaily = dailyReduce(actPts, 'activeMinutes', function(b){
         var levels = b.activeMinutesByActivityLevel;
@@ -535,8 +544,14 @@
         }
         return num(b.minutes!=null?b.minutes:(b.count!=null?b.count:(b.value||0)));
       }, 'sum');
-      // Sleep: duration — parse fields TBD from raw 200 response; best-effort for now
-      var sleepDaily = dailyReduce(sleepPts, 'sleep', function(b){
+      // Sleep: fetched unfiltered — cut to last 7 days client-side before reducing
+      var cutoff = daysAgo(6).getTime();
+      var sleepPts7 = sleepPts.filter(function(p){
+        var d = pointDate(p, 'sleep');
+        return d && !isNaN(d.getTime()) && d.getTime() >= cutoff;
+      });
+      // Sleep duration parse fields TBD from raw 200 response — best-effort for now
+      var sleepDaily = dailyReduce(sleepPts7, 'sleep', function(b){
         var sec = num(b.durationMillis? b.durationMillis/1000 : (b.totalSleepSeconds ||
           (b.session && b.session.endTime && b.session.startTime ?
             (new Date(b.session.endTime)-new Date(b.session.startTime))/1000 :
