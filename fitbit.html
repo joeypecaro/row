@@ -221,7 +221,12 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
       if (!tok) throw new Error('token_expired');
       r = await doFetch(tok);
     }
-    if (!r.ok) throw new Error('api_' + r.status);
+    if (!r.ok) {
+      let body = '';
+      try { body = JSON.stringify(await r.json()); } catch { try { body = await r.text(); } catch {} }
+      console.error('[FITBIT] HTTP ' + r.status + ':', body.slice(0, 600));
+      throw new Error('api_' + r.status);
+    }
     return r.json();
   }
 
