@@ -28,12 +28,16 @@ module.exports = async function handler(req, res) {
     fetchOpts.body = JSON.stringify(req.body);
   }
 
+  console.log('[health-proxy] →', req.method, url);
   try {
     const r = await fetch(url, fetchOpts);
     const text = await r.text();
+    console.log('[health-proxy] ←', r.status, url.slice(0, 80));
+    if (!r.ok) console.log('[health-proxy] body:', text.slice(0, 400));
     const ct = r.headers.get('content-type') || 'application/json';
     res.status(r.status).setHeader('Content-Type', ct).end(text);
   } catch (e) {
+    console.error('[health-proxy] fetch error:', e.message, url);
     res.status(502).json({ error: 'Upstream error: ' + e.message });
   }
 };
