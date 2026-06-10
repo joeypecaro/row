@@ -1820,17 +1820,17 @@ main {
 
 <script>
 /* ============================================================
-   HEALTH DASHBOARD — Google Fit integration
+   HEALTH DASHBOARD — Google Health API v4
    ============================================================ */
 (function () {
   'use strict';
 
-  const FIT_BASE     = '/api/fit-proxy';
+  const HEALTH_BASE  = '/api/health-proxy';
   const TOKEN_KEY    = 'google_access_token';
   const REFRESH_KEY  = 'google_refresh_token';
   const TOKEN_EXP    = 'google_token_exp';
-  const CACHE_KEY    = 'health:fit_cache';
-  const CACHE_TTL    = 30 * 60 * 1000; // 30 min
+  const CACHE_KEY    = 'health:v4_cache';
+  const CACHE_TTL    = 30 * 60 * 1000;
 
   const GOALS = { steps: 10000, calories: 500, sleepH: 8, hrMin: 60, hrMax: 80 };
 
@@ -1877,58 +1877,120 @@ main {
     return r.json();
   }
 
-  // ── Fetch 7-day aggregate from Google Fit ────────────────────────────────
-  async function fetchFitData() {
-    const now = Date.now();
-    const start = now - 8 * 24 * 60 * 60 * 1000; // 8 days for full 7-day window
-    const body = {
-      aggregateBy: [
-        { dataTypeName: 'com.google.step_count.delta' },
-        { dataTypeName: 'com.google.calories.expended' },
-        { dataTypeName: 'com.google.heart_rate.bpm' },
-        { dataTypeName: 'com.google.sleep.segment' },
-        { dataTypeName: 'com.google.weight' },
-      ],
-      bucketByTime: { durationMillis: 86400000 },
-      startTimeMillis: start,
-      endTimeMillis: now,
-    };
-    console.log('[HEALTH] Requesting aggregate data...');
-    const data = await gFetch(FIT_BASE + '?path=/users/me/dataset:aggregate', { method: 'POST', body });
-    console.log('[HEALTH] Raw response:', data);
-    return parseBuckets(data.bucket || []);
+  // ── Fetch one data type from Google Health API v4 (handles pagination) ───
+  async function fetchDataType(dataType, filterField, startISO, endISO) {
+    const allPoints = [];
+    let pageToken = null;
+    do {
+      const filter = `${filterField} >= "${startISO}" AND ${filterField} < "${endISO}"`;
+      let url = `${HEALTH_BASE}?path=${encodeURIComponent('/users/me/dataTypes/' + dataType + '/dataPoints')}&filter=${encodeURIComponent(filter)}&pageSize=10000`;
+      if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+      const resp = await gFetch(url);
+      console.log('[HEALTH] ' + dataType + ' raw:', resp);
+      const pts = resp.dataPoints || resp.data_points || [];
+      allPoints.push(...pts);
+      pageToken = resp.nextPageToken || resp.next_page_token || null;
+    } while (pageToken);
+    return allPoints;
   }
 
-  function parseBuckets(buckets) {
-    return buckets.map(b => {
-      const day = {
-        date: new Date(parseInt(b.startTimeMillis)),
-        steps: 0, calories: 0, heartRate: null, sleepH: 0, weight: null,
-      };
-      for (const ds of (b.dataset || [])) {
-        if (!ds.point || !ds.point.length) continue;
-        const typeName = ds.point[0].dataTypeName;
-        if (typeName === 'com.google.step_count.delta') {
-          day.steps = ds.point.reduce((s, p) => s + ((p.value[0] && p.value[0].intVal) || 0), 0);
-        } else if (typeName === 'com.google.calories.expended') {
-          day.calories = Math.round(ds.point.reduce((s, p) => s + ((p.value[0] && p.value[0].fpVal) || 0), 0));
-        } else if (typeName === 'com.google.heart_rate.bpm') {
-          const vals = ds.point.map(p => (p.value[0] && p.value[0].fpVal) || 0).filter(v => v > 0);
-          day.heartRate = vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : null;
-        } else if (typeName === 'com.google.sleep.segment') {
-          let ms = 0;
-          for (const p of ds.point) {
-            const st = (p.value[0] && p.value[0].intVal) || 0;
-            if (st >= 2) ms += parseInt(p.endTimeNanos) / 1e6 - parseInt(p.startTimeNanos) / 1e6;
-          }
-          day.sleepH = Math.round(ms / 360000) / 10;
-        } else if (typeName === 'com.google.weight') {
-          const vals = ds.point.map(p => (p.value[0] && p.value[0].fpVal) || 0).filter(v => v > 0);
-          if (vals.length) day.weight = Math.round(vals[vals.length - 1] * 10) / 10;
-        }
+  // ── Extract the primary timestamp from any data point ───────────────────
+  function extractTime(point) {
+    return point.interval?.startTime
+      || point.sampleTime?.physicalTime
+      || point.measurementTime?.physicalTime
+      || point.startTime
+      || point.time;
+  }
+
+  function dateKey(timeStr) {
+    if (!timeStr) return null;
+    return new Date(timeStr).toISOString().slice(0, 10);
+  }
+
+  // ── Fetch 7-day data from Google Health API v4 ───────────────────────────
+  async function fetchHealthData() {
+    const now = new Date();
+    const sevenAgo  = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+    const thirtyAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const startISO  = sevenAgo.toISOString().slice(0, 10)  + 'T00:00:00Z';
+    const endISO    = now.toISOString();
+    const wtStartISO = thirtyAgo.toISOString().slice(0, 10) + 'T00:00:00Z';
+
+    const [stepsR, hrR, sleepR, calR, activeR, weightR] = await Promise.allSettled([
+      fetchDataType('steps',           'steps.interval.start_time',              startISO,  endISO),
+      fetchDataType('heart-rate',      'heart_rate.sample_time.physical_time',   startISO,  endISO),
+      fetchDataType('sleep',           'sleep.interval.start_time',              startISO,  endISO),
+      fetchDataType('calories-burned', 'calories_burned.interval.start_time',    startISO,  endISO),
+      fetchDataType('active-minutes',  'active_minutes.interval.start_time',     startISO,  endISO),
+      fetchDataType('weight',          'weight.measurement_time.physical_time',  wtStartISO, endISO),
+    ]);
+
+    const stepsPoints  = stepsR.status  === 'fulfilled' ? stepsR.value  : [];
+    const hrPoints     = hrR.status     === 'fulfilled' ? hrR.value     : [];
+    const sleepPoints  = sleepR.status  === 'fulfilled' ? sleepR.value  : [];
+    const calPoints    = calR.status    === 'fulfilled' ? calR.value    : [];
+    const activePoints = activeR.status === 'fulfilled' ? activeR.value : [];
+    const weightPoints = weightR.status === 'fulfilled' ? weightR.value : [];
+
+    if (stepsR.status  === 'rejected') console.warn('[HEALTH] steps failed:',          stepsR.reason);
+    if (hrR.status     === 'rejected') console.warn('[HEALTH] heart-rate failed:',      hrR.reason);
+    if (sleepR.status  === 'rejected') console.warn('[HEALTH] sleep failed:',           sleepR.reason);
+    if (calR.status    === 'rejected') console.warn('[HEALTH] calories-burned failed:', calR.reason);
+    if (activeR.status === 'rejected') console.warn('[HEALTH] active-minutes failed:',  activeR.reason);
+    if (weightR.status === 'rejected') console.warn('[HEALTH] weight failed:',          weightR.reason);
+
+    const dayMap = {};
+    function ensureDay(k) {
+      if (!dayMap[k]) dayMap[k] = { date: new Date(k + 'T12:00:00Z'), steps: 0, calories: 0, heartRate: null, sleepH: 0, weight: null, activeMinutes: 0, _hrSamples: [] };
+      return dayMap[k];
+    }
+
+    for (const p of stepsPoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      ensureDay(k).steps += p.steps || p.count || p.value || 0;
+    }
+    for (const p of hrPoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      const bpm = p.heartRate?.beatsPerMinute ?? p.heartRate?.bpm ?? p.bpm ?? p.heartRate ?? 0;
+      if (bpm > 0) ensureDay(k)._hrSamples.push(bpm);
+    }
+    for (const p of sleepPoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      const d = ensureDay(k);
+      const durSec = p.sleep?.duration?.seconds || p.durationSeconds || 0;
+      const st = p.interval?.startTime || p.startTime;
+      const et = p.interval?.endTime   || p.endTime;
+      if (st && et) {
+        d.sleepH += (new Date(et) - new Date(st)) / 3600000;
+      } else {
+        d.sleepH += durSec / 3600;
       }
-      return day;
-    });
+    }
+    for (const p of calPoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      const kcal = p.caloriesBurned?.kilocalories ?? p.calories?.kilocalories ?? p.kilocalories ?? p.calories ?? p.value ?? 0;
+      ensureDay(k).calories += kcal;
+    }
+    for (const p of activePoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      ensureDay(k).activeMinutes += p.activeMinutes?.value ?? p.value ?? p.minutes ?? 0;
+    }
+    for (const p of weightPoints) {
+      const k = dateKey(extractTime(p)); if (!k) continue;
+      const kg = p.weight?.mass?.kilograms ?? p.weight?.kilograms ?? p.kilograms ?? p.weight ?? p.value ?? 0;
+      if (kg > 0) ensureDay(k).weight = Math.round(kg * 10) / 10;
+    }
+
+    return Object.values(dayMap)
+      .map(d => {
+        if (d._hrSamples.length) d.heartRate = Math.round(d._hrSamples.reduce((s, v) => s + v, 0) / d._hrSamples.length);
+        d.calories = Math.round(d.calories);
+        d.sleepH   = Math.round(d.sleepH * 10) / 10;
+        delete d._hrSamples;
+        return d;
+      })
+      .sort((a, b) => a.date - b.date);
   }
 
   // ── Cache helpers ─────────────────────────────────────────────────────────
@@ -1948,7 +2010,7 @@ main {
     const btn = document.getElementById('healthSyncBtn');
     if (showSpinner && btn) { btn.textContent = '↻ Syncing…'; btn.disabled = true; }
     try {
-      const days = await fetchFitData();
+      const days = await fetchHealthData();
       writeCache(days);
       renderAll(days);
       const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -2222,7 +2284,7 @@ main {
     if (sleepTrend != null && sleepTrend < 0.9 && aSleep != null && aSleep < 7) watch.push('Sleep duration is declining — aim for a consistent bedtime');
 
     if (!good.length && !improve.length && !watch.length) {
-      el.innerHTML = `<div class="health-empty">Connect fitness tracking apps to Google Fit to see insights</div>`;
+      el.innerHTML = `<div class="health-empty">Connect your device to Google Health to see insights</div>`;
       return;
     }
 

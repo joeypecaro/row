@@ -4,6 +4,7 @@
     "NEXT_PUBLIC_BASE_URL": "https://row-rho-seven.vercel.app"
   },
   "functions": {
-    "api/cal-proxy.js": { "maxDuration": 10 }
+    "api/cal-proxy.js":    { "maxDuration": 10 },
+    "api/health-proxy.js": { "maxDuration": 10 }
   }
 }
