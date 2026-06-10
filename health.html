@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
 <meta name="color-scheme" content="dark">
-<title>Daily Stack — Customizable Template</title>
+<title>Health — Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
@@ -466,6 +466,177 @@ main {
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
 
+/* ============================================================
+   HEALTH DASHBOARD
+   ============================================================ */
+.health-not-connected {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  margin-bottom: 28px;
+  backdrop-filter: blur(24px);
+}
+.health-not-connected p { margin: 0 0 14px; color: var(--text-secondary); font-size: 14px; }
+.health-connect-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: 999px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8E5DD 100%);
+  color: #0A0A0B; font-weight: 700; font-size: 13px;
+  text-decoration: none; font-family: var(--font);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.3);
+  transition: transform 0.12s, box-shadow 0.18s;
+}
+.health-connect-btn:hover { transform: translateY(-1px); }
+
+.health-section { margin-bottom: 28px; }
+
+/* Header row */
+.health-hdr {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.health-sync-time {
+  flex: 1; font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); min-width: 0;
+}
+.health-sync-btn {
+  padding: 6px 14px; border-radius: 999px; font-size: 12px;
+  font-family: var(--font); font-weight: 600;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border-strong);
+  color: var(--text-secondary); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.health-sync-btn:hover { background: rgba(255,255,255,0.10); color: var(--text-primary); }
+.health-sync-btn:disabled { opacity: 0.5; cursor: default; }
+.health-score-wrap {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-tertiary);
+}
+.health-score-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* Glance cards grid */
+.health-glance-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  margin-bottom: 24px;
+}
+@media (min-width: 520px) { .health-glance-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.hcard {
+  background: var(--bg-card); border-radius: 14px; padding: 14px 14px 12px;
+  backdrop-filter: blur(16px); display: flex; flex-direction: column; gap: 6px;
+  min-height: 90px;
+}
+.hcard-eyebrow {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary);
+}
+.hcard-main { display: flex; align-items: center; gap: 8px; }
+.hcard-ring { flex-shrink: 0; }
+.hcard-ring svg { display: block; }
+.hcard-val {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.03em;
+  color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.hcard-unit { font-size: 12px; color: var(--text-tertiary); font-weight: 500; margin-left: 2px; }
+.hcard-trend { font-size: 14px; font-weight: 700; margin-left: 4px; }
+.hcard-trend.up   { color: #FF6B6B; }
+.hcard-trend.down { color: #6BE3A4; }
+.hcard-trend.flat { color: var(--text-tertiary); }
+.hcard-sub {
+  font-size: 10.5px; color: var(--text-tertiary); font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.hcard-bar-track {
+  height: 4px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden;
+}
+.hcard-bar-fill { height: 100%; border-radius: 999px; transition: width 0.5s cubic-bezier(0.22,1,0.36,1); }
+
+/* Trends charts */
+.health-trends-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 24px;
+}
+@media (max-width: 480px) { .health-trends-grid { grid-template-columns: 1fr; } }
+
+.hchart-card {
+  background: var(--bg-card); border-radius: 14px; padding: 14px;
+  backdrop-filter: blur(16px);
+}
+.hchart-label {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary);
+  margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+}
+.hchart-avg { font-size: 10px; font-weight: 600; color: var(--text-secondary); }
+.hchart-svg { display: block; width: 100%; height: 72px; overflow: visible; }
+.hchart-days {
+  display: flex; justify-content: space-between; margin-top: 5px;
+  font-size: 9px; color: var(--text-quaternary); font-family: var(--font-mono);
+}
+
+/* Insights */
+.health-insights-grid {
+  display: grid; grid-template-columns: 1fr; gap: 10px;
+  margin-bottom: 24px;
+}
+.hinsight {
+  border-radius: 14px; padding: 14px 16px;
+  background: var(--bg-card);
+}
+.hinsight-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.hinsight.good  .hinsight-title { color: #6BE3A4; }
+.hinsight.improve .hinsight-title { color: #F2C063; }
+.hinsight.watch   .hinsight-title { color: #60A5FA; }
+.hinsight-item { font-size: 12px; color: var(--text-secondary); line-height: 1.5; padding: 2px 0; }
+.hinsight-empty { color: var(--text-quaternary); font-style: italic; }
+
+/* Breakdown panels */
+.hpanel {
+  background: var(--bg-card); border-radius: 14px; overflow: hidden;
+  margin-bottom: 8px; backdrop-filter: blur(16px);
+}
+.hpanel-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  transition: background 0.15s;
+}
+.hpanel-hdr:hover { background: rgba(255,255,255,0.03); }
+.hpanel-arrow {
+  font-size: 18px; color: var(--text-tertiary);
+  transition: transform 0.2s; line-height: 1;
+}
+.hpanel.open .hpanel-arrow { transform: rotate(90deg); }
+.hpanel-body {
+  display: none; padding: 4px 16px 16px;
+  border-top: 1px solid var(--border-soft);
+}
+.hpanel.open .hpanel-body { display: block; }
+.hpanel-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 12px;
+}
+.hpanel-row:last-child { border-bottom: none; }
+.hpanel-row-label { color: var(--text-tertiary); }
+.hpanel-row-val { color: var(--text-primary); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Loading / empty */
+.health-loading-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 14px; height: 90px;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.health-empty {
+  font-size: 12px; color: var(--text-quaternary); font-style: italic;
+  text-align: center; padding: 16px 0;
+}
 
 /* ============================================================
    NUTRITION TRACKER
@@ -548,7 +719,80 @@ main {
 
 <main>
 
-  <div class="section-title">Daily Stack</div>
+  <!-- ===== HEALTH DASHBOARD ===== -->
+
+  <!-- Not-connected state -->
+  <div id="healthNotConnected" class="health-not-connected" style="display:none">
+    <p>Connect your Google account to see health &amp; fitness data from Google Fit.</p>
+    <a href="settings.html" class="health-connect-btn">Connect Google →</a>
+  </div>
+
+  <div id="healthSection" style="display:none">
+
+    <!-- Header: sync time + sync button + health score -->
+    <div class="health-hdr">
+      <span class="health-sync-time" id="healthSyncTime">Health data not yet loaded</span>
+      <button class="health-sync-btn" id="healthSyncBtn">↻ Sync</button>
+      <div class="health-score-wrap">
+        <svg id="healthScoreSvg" viewBox="0 0 44 44" width="40" height="40">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+        </svg>
+        <div>
+          <div id="healthScoreNum" style="font-size:18px;font-weight:700;color:var(--text-primary);line-height:1">—</div>
+          <div class="health-score-label">Health Score</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Today at a Glance -->
+    <div class="section-title">Today at a Glance</div>
+    <div class="health-glance-grid" id="healthGlance">
+      <div class="health-loading-skeleton"></div>
+      <div class="health-loading-skeleton"></div>
+      <div class="health-loading-skeleton"></div>
+      <div class="health-loading-skeleton"></div>
+      <div class="health-loading-skeleton"></div>
+    </div>
+
+    <!-- Section 2: 7-Day Trends -->
+    <div class="section-title">7-Day Trends</div>
+    <div class="health-trends-grid" id="healthTrends">
+      <div class="hchart-card">
+        <div class="hchart-label">Steps <span class="hchart-avg" id="avgStepsLbl"></span></div>
+        <svg id="chartSteps" class="hchart-svg" viewBox="0 0 200 72" preserveAspectRatio="none"></svg>
+        <div class="hchart-days" id="daysSteps"></div>
+      </div>
+      <div class="hchart-card">
+        <div class="hchart-label">Heart Rate <span class="hchart-avg" id="avgHrLbl"></span></div>
+        <svg id="chartHR" class="hchart-svg" viewBox="0 0 200 72" preserveAspectRatio="none"></svg>
+        <div class="hchart-days" id="daysHR"></div>
+      </div>
+      <div class="hchart-card">
+        <div class="hchart-label">Sleep <span class="hchart-avg" id="avgSleepLbl"></span></div>
+        <svg id="chartSleep" class="hchart-svg" viewBox="0 0 200 72" preserveAspectRatio="none"></svg>
+        <div class="hchart-days" id="daysSleep"></div>
+      </div>
+      <div class="hchart-card">
+        <div class="hchart-label">Active Calories <span class="hchart-avg" id="avgCalLbl"></span></div>
+        <svg id="chartCal" class="hchart-svg" viewBox="0 0 200 72" preserveAspectRatio="none"></svg>
+        <div class="hchart-days" id="daysCal"></div>
+      </div>
+    </div>
+
+    <!-- Section 3: Insights -->
+    <div class="section-title">Insights &amp; Guidance</div>
+    <div class="health-insights-grid" id="healthInsights">
+      <div class="health-loading-skeleton" style="height:60px"></div>
+    </div>
+
+    <!-- Section 4: Detailed Breakdown -->
+    <div class="section-title">Detailed Breakdown</div>
+    <div id="healthBreakdown"></div>
+
+  </div>
+
+  <!-- ===== DAILY STACK ===== -->
+  <div class="section-title" style="margin-top:12px">Daily Stack</div>
 
   <div class="stack-card">
     <div class="stack-ticker" id="stackTicker">
@@ -1571,6 +1815,558 @@ main {
 
     renderAll();
   });
+})();
+</script>
+
+<script>
+/* ============================================================
+   HEALTH DASHBOARD — Google Fit integration
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const FIT_BASE     = '/api/fit-proxy';
+  const TOKEN_KEY    = 'google_access_token';
+  const REFRESH_KEY  = 'google_refresh_token';
+  const TOKEN_EXP    = 'google_token_exp';
+  const CACHE_KEY    = 'health:fit_cache';
+  const CACHE_TTL    = 30 * 60 * 1000; // 30 min
+
+  const GOALS = { steps: 10000, calories: 500, sleepH: 8, hrMin: 60, hrMax: 80 };
+
+  // ── Token helpers (same keys as calendar/settings) ───────────────────────
+  function getToken() {
+    const exp = parseInt(localStorage.getItem(TOKEN_EXP) || '0', 10);
+    if (exp && Date.now() > exp) return null;
+    return localStorage.getItem(TOKEN_KEY);
+  }
+  async function refreshToken() {
+    const rt = localStorage.getItem(REFRESH_KEY);
+    if (!rt) return null;
+    try {
+      const r = await fetch('/api/google-refresh', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+      const d = await r.json();
+      if (!d.access_token) return null;
+      localStorage.setItem(TOKEN_KEY, d.access_token);
+      localStorage.setItem(TOKEN_EXP, String(Date.now() + (d.expires_in || 3600) * 1000));
+      return d.access_token;
+    } catch { return null; }
+  }
+
+  // ── Authenticated fetch via proxy ─────────────────────────────────────────
+  async function gFetch(url, opts = {}) {
+    let tok = getToken();
+    if (!tok) { tok = await refreshToken(); if (!tok) throw new Error('not_authed'); }
+    const doFetch = t => {
+      const fo = { method: opts.method || 'GET', headers: { Authorization: 'Bearer ' + t, Accept: 'application/json' } };
+      if (opts.body) { fo.headers['Content-Type'] = 'application/json'; fo.body = JSON.stringify(opts.body); }
+      return fetch(url, fo);
+    };
+    let r = await doFetch(tok);
+    if (r.status === 401) {
+      tok = await refreshToken();
+      if (!tok) throw new Error('token_expired');
+      r = await doFetch(tok);
+    }
+    if (r.status === 403) { throw new Error('scope_error'); }
+    if (r.status === 204 || (r.status === 200 && r.headers.get('content-length') === '0')) return {};
+    if (!r.ok) throw new Error('api_' + r.status);
+    return r.json();
+  }
+
+  // ── Fetch 7-day aggregate from Google Fit ────────────────────────────────
+  async function fetchFitData() {
+    const now = Date.now();
+    const start = now - 8 * 24 * 60 * 60 * 1000; // 8 days for full 7-day window
+    const body = {
+      aggregateBy: [
+        { dataTypeName: 'com.google.step_count.delta' },
+        { dataTypeName: 'com.google.calories.expended' },
+        { dataTypeName: 'com.google.heart_rate.bpm' },
+        { dataTypeName: 'com.google.sleep.segment' },
+        { dataTypeName: 'com.google.weight' },
+      ],
+      bucketByTime: { durationMillis: 86400000 },
+      startTimeMillis: start,
+      endTimeMillis: now,
+    };
+    console.log('[HEALTH] Requesting aggregate data...');
+    const data = await gFetch(FIT_BASE + '?path=/users/me/dataset:aggregate', { method: 'POST', body });
+    console.log('[HEALTH] Raw response:', data);
+    return parseBuckets(data.bucket || []);
+  }
+
+  function parseBuckets(buckets) {
+    return buckets.map(b => {
+      const day = {
+        date: new Date(parseInt(b.startTimeMillis)),
+        steps: 0, calories: 0, heartRate: null, sleepH: 0, weight: null,
+      };
+      for (const ds of (b.dataset || [])) {
+        if (!ds.point || !ds.point.length) continue;
+        const typeName = ds.point[0].dataTypeName;
+        if (typeName === 'com.google.step_count.delta') {
+          day.steps = ds.point.reduce((s, p) => s + ((p.value[0] && p.value[0].intVal) || 0), 0);
+        } else if (typeName === 'com.google.calories.expended') {
+          day.calories = Math.round(ds.point.reduce((s, p) => s + ((p.value[0] && p.value[0].fpVal) || 0), 0));
+        } else if (typeName === 'com.google.heart_rate.bpm') {
+          const vals = ds.point.map(p => (p.value[0] && p.value[0].fpVal) || 0).filter(v => v > 0);
+          day.heartRate = vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : null;
+        } else if (typeName === 'com.google.sleep.segment') {
+          let ms = 0;
+          for (const p of ds.point) {
+            const st = (p.value[0] && p.value[0].intVal) || 0;
+            if (st >= 2) ms += parseInt(p.endTimeNanos) / 1e6 - parseInt(p.startTimeNanos) / 1e6;
+          }
+          day.sleepH = Math.round(ms / 360000) / 10;
+        } else if (typeName === 'com.google.weight') {
+          const vals = ds.point.map(p => (p.value[0] && p.value[0].fpVal) || 0).filter(v => v > 0);
+          if (vals.length) day.weight = Math.round(vals[vals.length - 1] * 10) / 10;
+        }
+      }
+      return day;
+    });
+  }
+
+  // ── Cache helpers ─────────────────────────────────────────────────────────
+  function readCache() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+      if (c && c.ts && Date.now() - c.ts < CACHE_TTL) return c.data;
+    } catch {}
+    return null;
+  }
+  function writeCache(data) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+  }
+
+  // ── Sync (called by button + on init) ────────────────────────────────────
+  async function syncData(showSpinner) {
+    const btn = document.getElementById('healthSyncBtn');
+    if (showSpinner && btn) { btn.textContent = '↻ Syncing…'; btn.disabled = true; }
+    try {
+      const days = await fetchFitData();
+      writeCache(days);
+      renderAll(days);
+      const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setText('healthSyncTime', 'Last synced ' + t);
+    } catch (e) {
+      console.error('[HEALTH] Sync error:', e);
+      const isAuth = ['not_authed', 'token_expired', 'scope_error'].includes(e.message);
+      if (isAuth) {
+        showState('healthNotConnected');
+      } else {
+        setText('healthSyncTime', 'Sync failed: ' + e.message);
+      }
+    } finally {
+      if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; }
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    let tok = getToken();
+    if (!tok) tok = await refreshToken();
+    if (!tok) { showState('healthNotConnected'); return; }
+    showState('healthSection');
+
+    document.getElementById('healthSyncBtn').addEventListener('click', () => syncData(true));
+
+    // Show cached data immediately if available
+    const cached = readCache();
+    if (cached) renderAll(cached);
+
+    // Always fetch fresh data
+    await syncData(false);
+  }
+
+  function showState(id) {
+    document.getElementById('healthNotConnected').style.display = id === 'healthNotConnected' ? '' : 'none';
+    document.getElementById('healthSection').style.display      = id === 'healthSection'      ? '' : 'none';
+  }
+  function setText(id, t) { const el = document.getElementById(id); if (el) el.textContent = t; }
+  function avg7(days, key) {
+    const vals = days.map(d => d[key]).filter(v => v != null && v > 0);
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+  }
+  function fmt(n, dec) { return n == null ? '—' : dec ? n.toFixed(dec) : Math.round(n).toLocaleString(); }
+  const DAY_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  // ── Master render ─────────────────────────────────────────────────────────
+  function renderAll(days) {
+    if (!days || !days.length) return;
+    const last7 = days.slice(-7);
+    const today = last7[last7.length - 1] || {};
+    renderGlance(today, last7);
+    renderCharts(last7);
+    renderInsights(today, last7);
+    renderBreakdown(today, last7);
+    renderScore(today, last7);
+  }
+
+  // ── Section 1: Glance ────────────────────────────────────────────────────
+  function renderGlance(today, days) {
+    const el = document.getElementById('healthGlance');
+    if (!el) return;
+    const avgHR = avg7(days, 'heartRate');
+    const stepsToday = today.steps || 0;
+    const stepsPct = Math.min(1, stepsToday / GOALS.steps);
+    const stepsColor = stepsPct >= 0.9 ? '#6BE3A4' : stepsPct >= 0.5 ? '#F2C063' : '#FF6B6B';
+    const circ = 2 * Math.PI * 16;
+    const fill = stepsPct * circ;
+    const hrVal = today.heartRate;
+    const hrTrend = (hrVal && avgHR)
+      ? (hrVal > avgHR * 1.05 ? 'up' : hrVal < avgHR * 0.95 ? 'down' : 'flat') : 'flat';
+    const hrArrow = hrTrend === 'up' ? '↑' : hrTrend === 'down' ? '↓' : '→';
+    const calPct = Math.min(1, (today.calories || 0) / GOALS.calories);
+    const calColor = calPct >= 0.9 ? '#6BE3A4' : calPct >= 0.5 ? '#F2C063' : '#FF6B6B';
+    const sleepPct = Math.min(1, (today.sleepH || 0) / GOALS.sleepH);
+    const sleepColor = sleepPct >= 0.875 ? '#6BE3A4' : sleepPct >= 0.625 ? '#F2C063' : '#A78BFA';
+
+    el.innerHTML = `
+      <div class="hcard">
+        <div class="hcard-eyebrow">Steps</div>
+        <div class="hcard-main">
+          <div class="hcard-ring">
+            <svg viewBox="0 0 36 36" width="36" height="36">
+              <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3.5"/>
+              <circle cx="18" cy="18" r="16" fill="none" stroke="${stepsColor}" stroke-width="3.5"
+                stroke-dasharray="${(fill*16/circ).toFixed(1)} ${(circ*16/circ).toFixed(1)}"
+                stroke-linecap="round" transform="rotate(-90 18 18)"
+                style="stroke-dasharray:${fill.toFixed(1)} ${circ.toFixed(1)}"/>
+            </svg>
+          </div>
+          <div>
+            <div class="hcard-val" style="color:${stepsColor}">${fmt(stepsToday)}</div>
+          </div>
+        </div>
+        <div class="hcard-sub">${(stepsPct * 100).toFixed(0)}% of ${GOALS.steps.toLocaleString()} goal</div>
+      </div>
+
+      <div class="hcard">
+        <div class="hcard-eyebrow">Active Calories</div>
+        <div class="hcard-main">
+          <div>
+            <div class="hcard-val">${fmt(today.calories)}<span class="hcard-unit">kcal</span></div>
+          </div>
+        </div>
+        <div class="hcard-bar-track" style="margin-top:4px">
+          <div class="hcard-bar-fill" style="width:${(calPct*100).toFixed(0)}%;background:${calColor}"></div>
+        </div>
+        <div class="hcard-sub">Goal: ${GOALS.calories} kcal</div>
+      </div>
+
+      <div class="hcard">
+        <div class="hcard-eyebrow">Resting Heart Rate</div>
+        <div class="hcard-main">
+          <div class="hcard-val" style="color:#FF6B6B">${hrVal != null ? hrVal : '—'}<span class="hcard-unit">bpm</span></div>
+          <span class="hcard-trend ${hrTrend}">${hrArrow}</span>
+        </div>
+        <div class="hcard-sub">7-day avg: ${avgHR != null ? Math.round(avgHR) + ' bpm' : 'no data'}</div>
+      </div>
+
+      <div class="hcard">
+        <div class="hcard-eyebrow">Sleep Last Night</div>
+        <div class="hcard-main">
+          <div class="hcard-val" style="color:${sleepColor}">${today.sleepH > 0 ? today.sleepH.toFixed(1) : '—'}<span class="hcard-unit">hrs</span></div>
+        </div>
+        <div class="hcard-bar-track" style="margin-top:4px">
+          <div class="hcard-bar-fill" style="width:${(sleepPct*100).toFixed(0)}%;background:${sleepColor}"></div>
+        </div>
+        <div class="hcard-sub">Goal: ${GOALS.sleepH} hrs</div>
+      </div>
+
+      <div class="hcard">
+        <div class="hcard-eyebrow">Weight</div>
+        <div class="hcard-main">
+          <div class="hcard-val">${today.weight != null ? today.weight : '—'}<span class="hcard-unit">kg</span></div>
+        </div>
+        <div class="hcard-sub">${today.weight != null ? 'Latest reading' : 'No data tracked'}</div>
+      </div>
+    `;
+  }
+
+  // ── Section 2: Charts ────────────────────────────────────────────────────
+  function renderCharts(days) {
+    const dayLabels = days.map(d => DAY_ABBR[d.date.getDay()]);
+
+    function setDayLabels(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = dayLabels.map(l => `<span>${l}</span>`).join('');
+    }
+
+    function barChart(svgId, vals, goal, color) {
+      const svg = document.getElementById(svgId);
+      if (!svg) return;
+      const hasAny = vals.some(v => v > 0);
+      if (!hasAny) { svg.innerHTML = `<text x="100" y="36" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)">No data</text>`; return; }
+      const maxV = Math.max(...vals, goal || 0) * 1.15 || 1;
+      const W = 200, H = 72, padB = 2, n = vals.length;
+      const slot = W / n;
+      const barW = slot * 0.6;
+      let html = '';
+      vals.forEach((v, i) => {
+        const h = Math.max(2, (v / maxV) * (H - padB));
+        const x = slot * i + slot * 0.2;
+        const y = H - padB - h;
+        const c = goal ? (v >= goal ? '#6BE3A4' : v >= goal * 0.5 ? '#F2C063' : '#FF6B6B') : color;
+        html += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${c}" rx="2" opacity="0.85"/>`;
+      });
+      if (goal) {
+        const gy = H - padB - (goal / maxV) * (H - padB);
+        html += `<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,0.28)" stroke-width="1" stroke-dasharray="3,2"/>`;
+      }
+      svg.innerHTML = html;
+    }
+
+    function lineChart(svgId, vals, color) {
+      const svg = document.getElementById(svgId);
+      if (!svg) return;
+      const defined = vals.filter(v => v != null && v > 0);
+      if (!defined.length) { svg.innerHTML = `<text x="100" y="36" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)">No data</text>`; return; }
+      const maxV = Math.max(...defined) * 1.12, minV = Math.min(...defined) * 0.88;
+      const range = maxV - minV || 1;
+      const W = 200, H = 72, pad = 8, n = vals.length;
+      const pts = vals.map((v, i) => {
+        if (v == null || v <= 0) return null;
+        const x = pad + (i / Math.max(n - 1, 1)) * (W - pad * 2);
+        const y = H - pad - ((v - minV) / range) * (H - pad * 2);
+        return [x, y];
+      });
+      let path = '', started = false;
+      pts.forEach(p => {
+        if (!p) { started = false; return; }
+        path += started ? ` L${p[0].toFixed(1)},${p[1].toFixed(1)}` : `M${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+        started = true;
+      });
+      let dots = pts.filter(Boolean).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" fill="${color}"/>`).join('');
+      svg.innerHTML = `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" opacity="0.8"/>${dots}`;
+    }
+
+    const stepVals = days.map(d => d.steps || 0);
+    const hrVals   = days.map(d => d.heartRate);
+    const sleepVals = days.map(d => d.sleepH || 0);
+    const calVals  = days.map(d => d.calories || 0);
+
+    barChart('chartSteps', stepVals, GOALS.steps, '#6BE3A4');
+    lineChart('chartHR', hrVals, '#FF6B6B');
+    barChart('chartSleep', sleepVals, GOALS.sleepH, '#A78BFA');
+    barChart('chartCal', calVals, GOALS.calories, '#F2C063');
+
+    setDayLabels('daysSteps'); setDayLabels('daysHR');
+    setDayLabels('daysSleep'); setDayLabels('daysCal');
+
+    const avgS = avg7(days, 'steps');
+    const avgH = avg7(days, 'heartRate');
+    const avgSl = avg7(days, 'sleepH');
+    const avgC = avg7(days, 'calories');
+    setText('avgStepsLbl', avgS != null ? 'avg ' + Math.round(avgS).toLocaleString() : '');
+    setText('avgHrLbl',    avgH != null ? 'avg ' + Math.round(avgH) + ' bpm' : '');
+    setText('avgSleepLbl', avgSl != null ? 'avg ' + avgSl.toFixed(1) + ' hrs' : '');
+    setText('avgCalLbl',   avgC != null ? 'avg ' + Math.round(avgC) + ' kcal' : '');
+  }
+
+  // ── Section 3: Insights ──────────────────────────────────────────────────
+  function renderInsights(today, days) {
+    const el = document.getElementById('healthInsights');
+    if (!el) return;
+
+    const aSteps = avg7(days, 'steps');
+    const aSleep = avg7(days, 'sleepH');
+    const aHR    = avg7(days, 'heartRate');
+    const aCal   = avg7(days, 'calories');
+
+    const good = [], improve = [], watch = [];
+
+    if (aSteps != null) {
+      if (aSteps >= GOALS.steps * 0.9) good.push(`Steps averaging ${Math.round(aSteps).toLocaleString()}/day — consistently on target`);
+      else improve.push(`Steps averaging ${Math.round(aSteps).toLocaleString()}/day — goal is ${GOALS.steps.toLocaleString()}`);
+    }
+    if (aSleep != null && aSleep > 0) {
+      if (aSleep >= 7) good.push(`Averaging ${aSleep.toFixed(1)} hrs sleep — well-rested`);
+      else improve.push(`Sleep averaging ${aSleep.toFixed(1)} hrs — aim for ${GOALS.sleepH}+ hrs`);
+    }
+    if (aHR != null) {
+      if (aHR >= GOALS.hrMin && aHR <= GOALS.hrMax) good.push(`Resting HR of ${Math.round(aHR)} bpm is in the healthy 60–80 range`);
+      else if (aHR > GOALS.hrMax) watch.push(`Resting HR of ${Math.round(aHR)} bpm is above the 60–80 range`);
+      else if (aHR < GOALS.hrMin) good.push(`Resting HR of ${Math.round(aHR)} bpm is below 60 — potentially great cardiovascular fitness`);
+    }
+    if (aCal != null && aCal > 0) {
+      if (aCal >= GOALS.calories * 0.8) good.push(`Active calories averaging ${Math.round(aCal)} kcal/day`);
+      else improve.push(`Active calories averaging ${Math.round(aCal)} kcal — aim for ${GOALS.calories}+ kcal`);
+    }
+
+    // Trend analysis: compare first half vs second half of 7-day window
+    function trendDir(arr) {
+      const a = arr.filter(v => v > 0);
+      if (a.length < 4) return null;
+      const mid = Math.floor(a.length / 2);
+      const first = a.slice(0, mid).reduce((s, v) => s + v, 0) / mid;
+      const second = a.slice(mid).reduce((s, v) => s + v, 0) / (a.length - mid);
+      return second / first; // >1 = rising, <1 = falling
+    }
+
+    const stepTrend = trendDir(days.map(d => d.steps || 0));
+    if (stepTrend != null) {
+      if (stepTrend > 1.1) watch.push('Step count is trending upward this week — great momentum');
+      else if (stepTrend < 0.9) watch.push('Step count has declined this week — consider a short walk each day');
+    }
+    const hrTrend = trendDir(days.map(d => d.heartRate || 0));
+    if (hrTrend != null && hrTrend > 1.07) watch.push('Resting heart rate has been rising — prioritize recovery and sleep');
+
+    const sleepTrend = trendDir(days.map(d => d.sleepH || 0));
+    if (sleepTrend != null && sleepTrend < 0.9 && aSleep != null && aSleep < 7) watch.push('Sleep duration is declining — aim for a consistent bedtime');
+
+    if (!good.length && !improve.length && !watch.length) {
+      el.innerHTML = `<div class="health-empty">Connect fitness tracking apps to Google Fit to see insights</div>`;
+      return;
+    }
+
+    const card = (cls, icon, title, items) => `
+      <div class="hinsight ${cls}">
+        <div class="hinsight-title">${icon} ${title}</div>
+        ${items.length
+          ? items.map(t => `<div class="hinsight-item">• ${t}</div>`).join('')
+          : `<div class="hinsight-item hinsight-empty">Nothing to flag here</div>`}
+      </div>`;
+
+    el.innerHTML =
+      card('good',    '✓', "What's going well", good) +
+      card('improve', '↑', 'Areas to improve',  improve) +
+      card('watch',   '~', 'Trends to watch',   watch);
+  }
+
+  // ── Section 4: Breakdown ─────────────────────────────────────────────────
+  function renderBreakdown(today, days) {
+    const el = document.getElementById('healthBreakdown');
+    if (!el) return;
+
+    const aSleep = avg7(days, 'sleepH');
+    const aSteps = avg7(days, 'steps');
+    const aHR    = avg7(days, 'heartRate');
+    const aW     = avg7(days, 'weight');
+
+    // Sleep consistency: std deviation of sleepH
+    const sleepVals = days.map(d => d.sleepH || 0).filter(v => v > 0);
+    let sleepStd = null;
+    if (sleepVals.length >= 3) {
+      const mean = sleepVals.reduce((s, v) => s + v, 0) / sleepVals.length;
+      sleepStd = Math.sqrt(sleepVals.reduce((s, v) => s + (v - mean) ** 2, 0) / sleepVals.length);
+    }
+
+    // Most active day
+    const sortedBySteps = [...days].sort((a, b) => (b.steps || 0) - (a.steps || 0));
+    const mostActiveDay = sortedBySteps[0];
+
+    const row = (label, val) => `
+      <div class="hpanel-row">
+        <span class="hpanel-row-label">${label}</span>
+        <span class="hpanel-row-val">${val}</span>
+      </div>`;
+
+    const panels = [
+      {
+        id: 'sleep', icon: '😴', title: 'Sleep',
+        rows: [
+          row('7-day avg duration', aSleep != null ? aSleep.toFixed(1) + ' hrs' : '—'),
+          row('Last night', today.sleepH > 0 ? today.sleepH.toFixed(1) + ' hrs' : '—'),
+          row('Consistency (std dev)', sleepStd != null ? '±' + sleepStd.toFixed(1) + ' hrs' : '—'),
+          row('Goal', GOALS.sleepH + ' hrs/night'),
+        ],
+      },
+      {
+        id: 'activity', icon: '🏃', title: 'Activity',
+        rows: [
+          row('7-day avg steps', aSteps != null ? Math.round(aSteps).toLocaleString() : '—'),
+          row('Best day this week', mostActiveDay && mostActiveDay.steps > 0 ? DAY_ABBR[mostActiveDay.date.getDay()] + ' — ' + mostActiveDay.steps.toLocaleString() + ' steps' : '—'),
+          row('Days at goal', days.filter(d => d.steps >= GOALS.steps).length + ' / 7'),
+          row('Avg active calories', avg7(days, 'calories') != null ? Math.round(avg7(days, 'calories')) + ' kcal' : '—'),
+        ],
+      },
+      {
+        id: 'heart', icon: '♥', title: 'Heart',
+        rows: [
+          row('7-day avg resting HR', aHR != null ? Math.round(aHR) + ' bpm' : '—'),
+          row('Today\'s reading', today.heartRate != null ? today.heartRate + ' bpm' : '—'),
+          row('Healthy range', GOALS.hrMin + '–' + GOALS.hrMax + ' bpm'),
+          row('Status', aHR == null ? '—' : aHR >= GOALS.hrMin && aHR <= GOALS.hrMax ? 'In range ✓' : aHR > GOALS.hrMax ? 'Above range' : 'Below range (may indicate high fitness)'),
+        ],
+      },
+      {
+        id: 'body', icon: '⚖️', title: 'Body',
+        rows: [
+          row('Latest weight', today.weight != null ? today.weight + ' kg' : '—'),
+          row('7-day avg weight', aW != null ? aW.toFixed(1) + ' kg' : '—'),
+          row('Trend', (() => {
+            const ws = days.map(d => d.weight).filter(v => v != null);
+            if (ws.length < 2) return '—';
+            const diff = ws[ws.length - 1] - ws[0];
+            return (diff > 0 ? '+' : '') + diff.toFixed(1) + ' kg over 7 days';
+          })()),
+        ],
+      },
+    ];
+
+    el.innerHTML = panels.map(p => `
+      <div class="hpanel" id="hpanel-${p.id}">
+        <div class="hpanel-hdr" onclick="toggleHPanel('${p.id}')">
+          <span>${p.icon} ${p.title}</span>
+          <span class="hpanel-arrow">›</span>
+        </div>
+        <div class="hpanel-body">${p.rows.join('')}</div>
+      </div>`
+    ).join('');
+  }
+
+  window.toggleHPanel = function (id) {
+    const p = document.getElementById('hpanel-' + id);
+    if (p) p.classList.toggle('open');
+  };
+
+  // ── Health score ──────────────────────────────────────────────────────────
+  function renderScore(today, days) {
+    const aSteps = avg7(days, 'steps');
+    const aSleep = avg7(days, 'sleepH');
+    const aHR    = avg7(days, 'heartRate');
+    const aCal   = avg7(days, 'calories');
+
+    let score = 0;
+    if (aSteps != null) score += Math.min(25, (aSteps / GOALS.steps) * 25);
+    if (aSleep != null && aSleep > 0) score += Math.min(25, (aSleep / GOALS.sleepH) * 25);
+    if (aHR != null) {
+      const mid = (GOALS.hrMin + GOALS.hrMax) / 2;
+      const range = (GOALS.hrMax - GOALS.hrMin) / 2 + 10;
+      score += Math.max(0, 25 - Math.max(0, Math.abs(aHR - mid) - (GOALS.hrMax - GOALS.hrMin) / 2) * 2.5);
+    }
+    if (aCal != null && aCal > 0) score += Math.min(25, (aCal / GOALS.calories) * 25);
+    score = Math.round(score);
+
+    const color = score >= 75 ? '#6BE3A4' : score >= 50 ? '#F2C063' : '#FF6B6B';
+    const circ = 2 * Math.PI * 18;
+    const fill = (score / 100) * circ;
+    const svg = document.getElementById('healthScoreSvg');
+    if (svg) {
+      svg.innerHTML = `
+        <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+        <circle cx="22" cy="22" r="18" fill="none" stroke="${color}" stroke-width="4"
+          stroke-dasharray="${fill.toFixed(1)} ${circ.toFixed(1)}"
+          stroke-linecap="round" transform="rotate(-90 22 22)"/>`;
+    }
+    setText('healthScoreNum', String(score));
+    const numEl = document.getElementById('healthScoreNum');
+    if (numEl) numEl.style.color = color;
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 
