@@ -183,7 +183,7 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
   const REFRESH_KEY   = 'google_refresh_token';
   const TOKEN_EXP_KEY = 'google_token_exp';
   const SYNC_KEY      = 'gh_last_sync';
-  const FIT_BASE      = 'https://fitness.googleapis.com';
+  const HEALTH_BASE   = '/api/health-proxy';
 
   function getToken() {
     const exp = parseInt(localStorage.getItem(TOKEN_EXP_KEY) || '0', 10);
@@ -237,67 +237,25 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
   }
   function avg(arr) { return arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : 0; }
 
-  // ── Parse aggregate buckets into day objects ─────────────────
-  function parseBuckets(aggData) {
-    if (!aggData || !aggData.bucket) return [];
-    return aggData.bucket.map(bucket => {
-      const day = { dateMs: parseInt(bucket.startTimeMillis), steps: 0, calories: 0, azm: 0, distanceM: 0 };
-      for (const ds of (bucket.dataset || [])) {
-        const pts = ds.point || []; if (!pts.length) continue;
-        const id = ds.dataSourceId || '';
-        if (id.includes('step_count'))
-          day.steps     = pts.reduce((s,p) => s + ((p.value[0] && p.value[0].intVal) || 0), 0);
-        else if (id.includes('calories'))
-          day.calories  = Math.round(pts.reduce((s,p) => s + ((p.value[0] && p.value[0].fpVal) || 0), 0));
-        else if (id.includes('active_m'))
-          day.azm       = pts.reduce((s,p) => s + ((p.value[0] && p.value[0].intVal) || 0), 0);
-        else if (id.includes('distance'))
-          day.distanceM = Math.round(pts.reduce((s,p) => s + ((p.value[0] && p.value[0].fpVal) || 0), 0));
-      }
-      return day;
-    });
+  // ── Google Health API v4 helpers ────────────────────────────
+  async function fetchDaily(dataType, filterField, startISO, endISO) {
+    const filter = filterField + ' >= "' + startISO + '" AND ' + filterField + ' < "' + endISO + '"';
+    const path   = '/users/me/dataTypes/' + dataType + '/dataPoints:dailyRollup';
+    const url    = HEALTH_BASE + '?path=' + encodeURIComponent(path) + '&filter=' + encodeURIComponent(filter) + '&pageSize=100';
+    console.log('[FITBIT] Fetching:', url);
+    const resp = await gFetch(url);
+    console.log('[FITBIT] ' + dataType + ':', JSON.stringify(resp).slice(0, 400));
+    return resp.dataPoints || resp.data_points || [];
   }
 
-  // Map sleep sessions to dateMs → longest session minutes
-  function parseSleep(sleepData) {
-    const map = {};
-    if (!sleepData || !sleepData.session) return map;
-    for (const s of sleepData.session) {
-      const d = new Date(parseInt(s.startTimeMillis));
-      const key = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-      const mins = Math.round((parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis)) / 60000);
-      map[key] = Math.max(map[key] || 0, mins);
-    }
-    return map;
-  }
-
-  // Today's sleep stages from segment data source
-  function parseSegments(segData) {
-    let rem = 0, deep = 0, light = 0, awake = 0;
-    if (!segData || !segData.point) return { rem, deep, light, awake };
-    for (const pt of segData.point) {
-      const type = pt.value && pt.value[0] && pt.value[0].intVal;
-      const mins = Math.round((parseInt(pt.endTimeNanos) - parseInt(pt.startTimeNanos)) / 1e9 / 60);
-      if      (type === 62) rem   += mins;
-      else if (type === 61) deep  += mins;
-      else if (type === 60) light += mins;
-      else if (type === 59) awake += mins;
-      else if (type === 57) light += mins;
-    }
-    return { rem, deep, light, awake };
-  }
-
-  // Today's HR: RHR (10th pct), min, max
-  function parseHR(hrData) {
-    if (!hrData || !hrData.point || !hrData.point.length) return { rhr: null, hrMin: null, hrMax: null };
-    const vals = hrData.point.map(p => p.value && p.value[0] && p.value[0].fpVal).filter(v => v > 30 && v < 220);
-    if (!vals.length) return { rhr: null, hrMin: null, hrMax: null };
-    const sorted = [...vals].sort((a, b) => a - b);
-    return {
-      rhr:   Math.round(sorted[Math.floor(sorted.length * 0.10)]),
-      hrMin: Math.round(sorted[0]),
-      hrMax: Math.round(sorted[sorted.length - 1]),
-    };
+  async function fetchSamples(dataType, filterField, startISO, endISO) {
+    const filter = filterField + ' >= "' + startISO + '" AND ' + filterField + ' < "' + endISO + '"';
+    const path   = '/users/me/dataTypes/' + dataType + '/dataPoints';
+    const url    = HEALTH_BASE + '?path=' + encodeURIComponent(path) + '&filter=' + encodeURIComponent(filter) + '&pageSize=1000';
+    console.log('[FITBIT] Fetching:', url);
+    const resp = await gFetch(url);
+    console.log('[FITBIT] ' + dataType + ':', JSON.stringify(resp).slice(0, 400));
+    return resp.dataPoints || resp.data_points || [];
   }
 
   // ── Glance card HTML builders ────────────────────────────────
@@ -567,71 +525,98 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
     if (ins.length) show('insightsSection');
   }
 
-  // ── Load data ────────────────────────────────────────────────
+  // ── Load data from Google Health API v4 ─────────────────────
   async function loadData() {
     const btn = document.getElementById('refreshBtn');
     if (btn) btn.classList.add('spinning');
 
-    const now   = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const d14   = new Date(today.getTime() - 13 * 86400000);
+    const now      = new Date();
+    const today    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const d14      = new Date(today.getTime() - 13 * 86400000);
+    const tomorrow = new Date(today.getTime() + 86400000);
 
-    const startNs  = String(today.getTime() * 1e6);
-    const endNs    = String(now.getTime() * 1e6);
-
-    const aggBody = {
-      aggregateBy: [
-        { dataTypeName: 'com.google.step_count.delta' },
-        { dataTypeName: 'com.google.calories.expended' },
-        { dataTypeName: 'com.google.active_minutes' },
-        { dataTypeName: 'com.google.distance.delta' },
-      ],
-      bucketByTime: { durationMillis: '86400000' },
-      startTimeMillis: String(d14.getTime()),
-      endTimeMillis:   String(now.getTime()),
-    };
+    const startISO    = d14.toISOString().slice(0, 10)      + 'T00:00:00Z';
+    const todayISO    = today.toISOString().slice(0, 10)    + 'T00:00:00Z';
+    const tomorrowISO = tomorrow.toISOString().slice(0, 10) + 'T00:00:00Z';
+    const endISO      = now.toISOString();
 
     try {
-      const [aggR, hrR, sleepR, segR] = await Promise.allSettled([
-        gFetch(FIT_BASE + '/fitness/v1/users/me/dataset:aggregate', { method: 'POST', body: aggBody }),
-        gFetch(FIT_BASE + '/fitness/v1/users/me/dataSources/derived:com.google.heart_rate.bpm:com.google.android.gms:merge_heart_rate_bpm/datasets/' + startNs + '-' + endNs),
-        gFetch(FIT_BASE + '/fitness/v1/users/me/sessions?activityType=72&startTime=' + encodeURIComponent(d14.toISOString()) + '&endTime=' + encodeURIComponent(now.toISOString())),
-        gFetch(FIT_BASE + '/fitness/v1/users/me/dataSources/derived:com.google.sleep.segment:com.google.android.gms:merged/datasets/' + startNs + '-' + endNs),
+      const [stepsR, rhrR, sleepR, activeR, hrR] = await Promise.allSettled([
+        fetchDaily  ('steps',                    'steps.interval.start_time',                startISO,  endISO),
+        fetchDaily  ('daily-resting-heart-rate', 'daily_resting_heart_rate.start_time',      startISO,  endISO),
+        fetchDaily  ('sleep',                    'sleep.interval.start_time',                startISO,  endISO),
+        fetchDaily  ('active-minutes',           'active_minutes.interval.start_time',       startISO,  endISO),
+        fetchSamples('heart-rate',               'heart_rate.sample_time.physical_time',     todayISO,  tomorrowISO),
       ]);
 
-      const val = r => r.status === 'fulfilled' ? r.value : null;
+      if (stepsR.status  === 'rejected') console.warn('[FITBIT] steps failed:',   stepsR.reason);
+      if (rhrR.status    === 'rejected') console.warn('[FITBIT] rhr failed:',     rhrR.reason);
+      if (sleepR.status  === 'rejected') console.warn('[FITBIT] sleep failed:',   sleepR.reason);
+      if (activeR.status === 'rejected') console.warn('[FITBIT] active failed:',  activeR.reason);
+      if (hrR.status     === 'rejected') console.warn('[FITBIT] hr failed:',      hrR.reason);
 
-      const allBuckets = parseBuckets(val(aggR));
-      const sleepMap   = parseSleep(val(sleepR));
-      const stages     = parseSegments(val(segR));
-      const hr         = parseHR(val(hrR));
+      const stepsPoints  = stepsR.status  === 'fulfilled' ? stepsR.value  : [];
+      const rhrPoints    = rhrR.status    === 'fulfilled' ? rhrR.value    : [];
+      const sleepPoints  = sleepR.status  === 'fulfilled' ? sleepR.value  : [];
+      const activePoints = activeR.status === 'fulfilled' ? activeR.value : [];
+      const hrPoints     = hrR.status     === 'fulfilled' ? hrR.value     : [];
 
-      // last 14 buckets: first 7 = prior week, last 7 = this week
-      const last14  = allBuckets.slice(-14);
+      // Build a per-day map keyed by YYYY-MM-DD
+      const dayMap = {};
+      const day0 = dk => {
+        if (!dayMap[dk]) dayMap[dk] = { dateKey: dk, steps: 0, calories: 0, azm: 0, distanceM: 0, sleepMins: 0, rhr: null };
+        return dayMap[dk];
+      };
+      const ptKey = p => (p.interval?.startTime || p.sampleTime?.physicalTime || p.startTime || p.day || '').slice(0, 10);
+
+      for (const p of stepsPoints) {
+        const k = ptKey(p); if (!k) continue;
+        day0(k).steps = p.steps ?? p.count ?? p.value ?? 0;
+      }
+      for (const p of rhrPoints) {
+        const k = ptKey(p); if (!k) continue;
+        const bpm = p.dailyRestingHeartRate?.beatsPerMinute ?? p.heartRate?.beatsPerMinute ?? p.bpm ?? p.value ?? null;
+        if (bpm != null) day0(k).rhr = Math.round(bpm);
+      }
+      for (const p of sleepPoints) {
+        const k = ptKey(p); if (!k) continue;
+        const st = p.interval?.startTime || p.startTime;
+        const et = p.interval?.endTime   || p.endTime;
+        if (st && et) day0(k).sleepMins += Math.round((new Date(et) - new Date(st)) / 60000);
+      }
+      for (const p of activePoints) {
+        const k = ptKey(p); if (!k) continue;
+        day0(k).azm = p.activeMinutes?.value ?? p.value ?? p.minutes ?? 0;
+      }
+
+      // Today's HR min/max from raw samples
+      let hrMin = null, hrMax = null;
+      const hrBpms = hrPoints.map(p => p.heartRate?.beatsPerMinute ?? p.bpm ?? p.value ?? 0).filter(v => v > 30 && v < 220);
+      if (hrBpms.length) { hrMin = Math.round(Math.min(...hrBpms)); hrMax = Math.round(Math.max(...hrBpms)); }
+
+      // Sort by date; convert dateKey → local dateMs for the render functions
+      const sorted = Object.values(dayMap).sort((a, b) => a.dateKey < b.dateKey ? -1 : 1);
+      const toDayMs = dk => { const p = dk.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]).getTime(); };
+      const daysAll = sorted.map(d => ({ ...d, dateMs: toDayMs(d.dateKey) }));
+
+      const last14  = daysAll.slice(-14);
       const prior7  = last14.slice(0, 7);
       const days7   = last14.slice(-7);
       const todayBk = days7[days7.length - 1] || {};
 
-      // Prefer stage-derived sleep minutes for today
-      const stageMins = stages.rem + stages.deep + stages.light;
-      const sleepMins = stageMins > 0 ? stageMins : (sleepMap[today.getTime()] || null);
-      const eff = stages.awake > 0 && stageMins > 0
-        ? Math.round(stageMins / (stageMins + stages.awake) * 100) : null;
+      const sleepMap = {};
+      for (const d of daysAll) { if (d.sleepMins) sleepMap[d.dateMs] = d.sleepMins; }
 
       const todayData = {
-        steps:    todayBk.steps    || null,
-        calories: todayBk.calories || 0,
-        azm:      todayBk.azm      || 0,
-        distanceM:todayBk.distanceM|| 0,
-        sleepMins,
-        sleepEff: eff,
-        rem:   stages.rem,
-        deep:  stages.deep,
-        light: stages.light,
-        awake: stages.awake,
-        rhr:   hr.rhr,
-        hrMin: hr.hrMin,
-        hrMax: hr.hrMax,
+        steps:     todayBk.steps    || null,
+        calories:  todayBk.calories || 0,
+        azm:       todayBk.azm      || 0,
+        distanceM: 0,
+        sleepMins: todayBk.sleepMins || null,
+        sleepEff:  null,
+        rem: 0, deep: 0, light: 0, awake: 0,
+        rhr:   todayBk.rhr || null,
+        hrMin, hrMax,
         spo2:  null,
       };
 
@@ -645,11 +630,10 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
       if (el) { el.textContent = 'Last synced at ' + new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); el.style.display = ''; }
 
     } catch (e) {
-      if (e.message === 'not_authed' || e.message === 'token_expired') {
+      console.error('[FITBIT] loadData error:', e);
+      if (['not_authed', 'token_expired', 'api_403'].includes(e.message)) {
         ['glanceSection','trendsSection','insightsSection'].forEach(id => hide(id));
         show('notConnected');
-      } else {
-        console.error('Google Fit load error:', e);
       }
     } finally {
       const b = document.getElementById('refreshBtn');
