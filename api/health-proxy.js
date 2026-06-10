@@ -30,16 +30,17 @@ module.exports = async function handler(req, res) {
     fetchOpts.body = JSON.stringify(req.body);
   }
 
-  console.log('[health-proxy] → ' + req.method + ' ' + url);
+  console.log('[PROXY] Google URL:', url);
+  console.log('[PROXY] Outbound Authorization header present:', !!auth);
   try {
     const r = await fetch(url, fetchOpts);
     const text = await r.text();
-    console.log('[health-proxy] ← ' + r.status + ' ' + url);
-    console.log('[health-proxy] body: ' + text.slice(0, 600));
+    console.log('[PROXY] Google status:', r.status);
+    console.log('[PROXY] Google body:', text); // full body — never truncated
     const ct = r.headers.get('content-type') || 'application/json';
     res.status(r.status).setHeader('Content-Type', ct).end(text);
   } catch (e) {
-    console.error('[health-proxy] fetch error: ' + e.message + ' ' + url);
+    console.error('[PROXY] fetch error:', e.message, url);
     res.status(502).json({ error: 'Upstream error: ' + e.message });
   }
 };

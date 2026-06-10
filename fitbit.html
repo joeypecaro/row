@@ -307,19 +307,20 @@
            + '&filter=' + encodeURIComponent(filterStr)
            + '&pageSize=' + (pageSize||1000);
     var url = PROXY + '?' + qs;
-    console.log('[HEALTH] Fetching:', url);
+    console.log('[HEALTH] →', dataTypeKebab, url);
     return fetch(url, { headers: token ? { 'Authorization':'Bearer '+token } : {} })
       .then(function(r){
-        console.log('[HEALTH] '+dataTypeKebab+' status:', r.status);
-        if (r.status === 401 || r.status === 403) { var e=new Error('auth_'+r.status); e.code=r.status; throw e; }
-        if (r.status === 404) { var e2=new Error('notfound'); e2.code=404; throw e2; }
-        if (!r.ok) { var e3=new Error('http_'+r.status); e3.code=r.status; throw e3; }
-        return r.json();
+        var status = r.status;
+        // Read body BEFORE throwing so we can log Google's real error reason
+        return r.text().then(function(body){
+          console.log('[HEALTH]', dataTypeKebab, status, body);
+          if (status === 401 || status === 403) { var e=new Error('auth_'+status); e.code=status; throw e; }
+          if (status === 404) { var e2=new Error('notfound'); e2.code=404; throw e2; }
+          if (status < 200 || status >= 300) { var e3=new Error('http_'+status); e3.code=status; throw e3; }
+          try { return JSON.parse(body); } catch(x) { return {}; }
+        });
       })
-      .then(function(j){
-        console.log('[HEALTH] '+dataTypeKebab+' body:', JSON.stringify(j).slice(0,200));
-        return j.dataPoints || [];
-      });
+      .then(function(j){ return j.dataPoints || []; });
   }
 
   // ===== Parsers (defensive — try multiple field names) =====
