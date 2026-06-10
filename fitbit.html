@@ -240,8 +240,8 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
   // ── Google Health API v4 helpers ────────────────────────────
   async function fetchDaily(dataType, filterField, startISO, endISO) {
     const filter = filterField + ' >= "' + startISO + '" AND ' + filterField + ' < "' + endISO + '"';
-    const path   = '/users/me/dataTypes/' + dataType + '/dataPoints:dailyRollup';
-    const url    = HEALTH_BASE + '?path=' + encodeURIComponent(path) + '&filter=' + encodeURIComponent(filter) + '&pageSize=100';
+    const path   = '/users/me/dataTypes/' + dataType + '/dataPoints';
+    const url    = HEALTH_BASE + '?path=' + encodeURIComponent(path) + '&filter=' + encodeURIComponent(filter) + '&pageSize=1000';
     console.log('[FITBIT] Fetching:', url);
     const resp = await gFetch(url);
     console.log('[FITBIT] ' + dataType + ':', JSON.stringify(resp).slice(0, 400));
@@ -571,7 +571,7 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
 
       for (const p of stepsPoints) {
         const k = ptKey(p); if (!k) continue;
-        day0(k).steps = p.steps ?? p.count ?? p.value ?? 0;
+        day0(k).steps += p.steps ?? p.count ?? p.value ?? 0;
       }
       for (const p of rhrPoints) {
         const k = ptKey(p); if (!k) continue;
@@ -586,7 +586,7 @@ main{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:56px 20px
       }
       for (const p of activePoints) {
         const k = ptKey(p); if (!k) continue;
-        day0(k).azm = p.activeMinutes?.value ?? p.value ?? p.minutes ?? 0;
+        day0(k).azm += p.activeMinutes?.value ?? p.value ?? p.minutes ?? 0;
       }
 
       // Today's HR min/max from raw samples
