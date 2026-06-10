@@ -290,7 +290,8 @@
   }
 
   // ===== Date helpers =====
-  function iso(d){ return d.toISOString(); }
+  // Strip milliseconds — some Google Health API filters reject .000Z form
+  function iso(d){ return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
   function daysAgo(n){ var d=new Date(); d.setUTCDate(d.getUTCDate()-n); d.setUTCHours(0,0,0,0); return d; }
   function todayStart(){ var d=new Date(); d.setUTCHours(0,0,0,0); return d; }
   function tomorrowStart(){ var d=todayStart(); d.setUTCDate(d.getUTCDate()+1); return d; }
@@ -447,6 +448,22 @@
     $('hxVerdict').style.display='block';
   }
 
+  // ===== Identity / scope check =====
+  // Call /identity first — if it 401/403s, the token lacks googlehealth scopes.
+  // Result appears in browser console AND Vercel function logs.
+  function checkIdentity(){
+    var token = getToken();
+    return fetch(PROXY + '?path=/identity', {
+      headers: token ? { 'Authorization':'Bearer '+token } : {}
+    })
+    .then(function(r){ return r.json().then(function(j){ return {status:r.status,body:j}; }); })
+    .then(function(result){
+      console.log('[HEALTH] identity status:', result.status, JSON.stringify(result.body));
+      return result.status === 200;
+    })
+    .catch(function(e){ console.error('[HEALTH] identity error:', e.message); return false; });
+  }
+
   // ===== Load all data =====
   function loadData(){
     hideBanner();
@@ -454,6 +471,12 @@
     var start7=iso(daysAgo(6)), now=iso(new Date());
     var startToday=iso(todayStart()), endToday=iso(tomorrowStart());
     var start30=iso(daysAgo(30));
+
+    // Run identity check in parallel with data fetches — result lands in console
+    checkIdentity().then(function(ok){
+      if (!ok) console.warn('[HEALTH] identity check FAILED — token likely missing googlehealth scopes. Reconnect Google in settings.');
+      else console.log('[HEALTH] identity check PASSED — token and scopes are valid');
+    });
 
     var calls = [
       gFetch('steps', 'steps.interval.start_time >= "'+start7+'" AND steps.interval.start_time < "'+now+'"', 1000),

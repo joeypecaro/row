@@ -1,5 +1,6 @@
 // Proxies Google Health API v4 requests from the browser.
 // Browser calls same-origin /api/health-proxy?path=... — no CORS preflight.
+// Full URL built: https://health.googleapis.com/v4/users/me + path
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -17,7 +18,8 @@ module.exports = async function handler(req, res) {
   const fwdParams = Object.assign({}, req.query);
   delete fwdParams.path;
   const qs = new URLSearchParams(fwdParams).toString();
-  const url = 'https://health.googleapis.com/v4' + apiPath + (qs ? '?' + qs : '');
+  // MUST include /users/me — Health API v4 scopes all resources under it
+  const url = 'https://health.googleapis.com/v4/users/me' + apiPath + (qs ? '?' + qs : '');
 
   const fetchOpts = {
     method: req.method,
@@ -28,16 +30,16 @@ module.exports = async function handler(req, res) {
     fetchOpts.body = JSON.stringify(req.body);
   }
 
-  console.log('[health-proxy] →', req.method, url);
+  console.log('[health-proxy] → ' + req.method + ' ' + url);
   try {
     const r = await fetch(url, fetchOpts);
     const text = await r.text();
-    console.log('[health-proxy] ←', r.status, url.slice(0, 80));
-    if (!r.ok) console.log('[health-proxy] body:', text.slice(0, 400));
+    console.log('[health-proxy] ← ' + r.status + ' ' + url);
+    console.log('[health-proxy] body: ' + text.slice(0, 600));
     const ct = r.headers.get('content-type') || 'application/json';
     res.status(r.status).setHeader('Content-Type', ct).end(text);
   } catch (e) {
-    console.error('[health-proxy] fetch error:', e.message, url);
+    console.error('[health-proxy] fetch error: ' + e.message + ' ' + url);
     res.status(502).json({ error: 'Upstream error: ' + e.message });
   }
 };
