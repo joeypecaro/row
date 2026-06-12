@@ -417,6 +417,18 @@
 
   function avg(arr){ var v=arr.filter(function(x){return x.value>0;}); return v.length? v.reduce(function(a,b){return a+b.value;},0)/v.length : 0; }
 
+  // One data point per day, FITBIT wins over HEALTH_KIT when both sources exist
+  function preferFitbit(points, typeKey){
+    var byDay={};
+    points.forEach(function(p){
+      var d=pointDate(p,typeKey);
+      if(!d||isNaN(d.getTime())) return;
+      var dk=d.toISOString().slice(0,10);
+      if(!byDay[dk]||p.platform==='FITBIT') byDay[dk]=p;
+    });
+    return Object.keys(byDay).map(function(k){return byDay[k];});
+  }
+
   // ===== Zone classification =====
   function zSteps(v){ return v>=9000?'z-good':v>=7000?'z-norm':v>=5000?'z-warn':'z-bad'; }
   function zSleep(h){ return h>=7.5?'z-good':h>=6.5?'z-norm':h>=5.5?'z-warn':'z-bad'; }
@@ -542,45 +554,36 @@
     return h12+':'+(m<10?'0':'')+m+' '+ampm;
   }
 
-  function buildSleepConsistency(sleepPts){
+  function buildSleepConsistency(sessionsByDay){
+    var sessArr=Object.keys(sessionsByDay).map(function(k){return sessionsByDay[k];});
+    if(sessArr.length<2){$('hxSleepConsist').style.display='none';return;}
+
     var bedtimes=[], waketimes=[];
-    sleepPts.forEach(function(p){
-      var b=p.sleep||{}, sess=b.session||{}, ival=b.interval||{};
-      var startStr=sess.civilStartTime||sess.startTime||ival.civilStartTime||ival.startTime;
-      var endStr=sess.civilEndTime||sess.endTime||ival.civilEndTime||ival.endTime;
-      if(startStr){
-        var d=new Date(startStr);
-        if(!isNaN(d.getTime())){
-          var h=d.getHours()+d.getMinutes()/60;
-          bedtimes.push(h>=18?h-24:h); // normalize: 23h→-1, handles pre/post-midnight
-        }
-      }
-      if(endStr){
-        var d2=new Date(endStr);
-        if(!isNaN(d2.getTime())) waketimes.push(d2.getHours()+d2.getMinutes()/60);
-      }
+    sessArr.forEach(function(s){
+      var h=s.startTime.getHours()+s.startTime.getMinutes()/60;
+      bedtimes.push(h>=18?h-24:h);
+      waketimes.push(s.endTime.getHours()+s.endTime.getMinutes()/60);
     });
-    if(bedtimes.length<2){ $('hxSleepConsist').style.display='none'; return; }
 
     var bedMean=bedtimes.reduce(function(a,b){return a+b;},0)/bedtimes.length;
     var bedStd=Math.sqrt(bedtimes.reduce(function(acc,b){return acc+(b-bedMean)*(b-bedMean);},0)/bedtimes.length);
     var bedReal=bedMean<0?bedMean+24:bedMean;
     var bedH=Math.floor(bedReal), bedM=Math.round((bedReal-bedH)*60);
-    if(bedM===60){bedH+=1;bedM=0;}
+    if(bedM===60){bedH++;bedM=0;}
     $('hxAvgBedtime').textContent=fmtTime(bedH,bedM);
 
     if(waketimes.length){
       var wakeMean=waketimes.reduce(function(a,b){return a+b;},0)/waketimes.length;
       var wakeH=Math.floor(wakeMean), wakeM=Math.round((wakeMean-wakeH)*60);
-      if(wakeM===60){wakeH+=1;wakeM=0;}
+      if(wakeM===60){wakeH++;wakeM=0;}
       $('hxAvgWake').textContent=fmtTime(wakeH,wakeM);
     }
 
     var sc=$('hxSleepConsistScore');
-    if(bedStd<0.5){ sc.textContent='Very consistent'; sc.style.color='var(--success)'; }
-    else if(bedStd<1){ sc.textContent='Consistent'; sc.style.color='var(--success)'; }
-    else if(bedStd<1.5){ sc.textContent='Somewhat varied'; sc.style.color='var(--warning)'; }
-    else { sc.textContent='Irregular'; sc.style.color='var(--danger)'; }
+    if(bedStd<0.5){sc.textContent='Very consistent';sc.style.color='var(--success)';}
+    else if(bedStd<1){sc.textContent='Consistent';sc.style.color='var(--success)';}
+    else if(bedStd<1.5){sc.textContent='Somewhat varied';sc.style.color='var(--warning)';}
+    else{sc.textContent='Irregular';sc.style.color='var(--danger)';}
     $('hxSleepConsist').style.display='block';
   }
 
@@ -647,8 +650,8 @@
 
       // Steps: count field is steps.count (string)
       var stepsDaily = dailyReduce(stepsPts, 'steps', function(b){ return num(b.count!=null?b.count:(b.value!=null?b.value:0)); }, 'sum');
-      // RHR: confirmed field is beatsPerMinute; avg mode handles FITBIT+HealthKit duplicates per day
-      var rhrDaily = dailyReduce(rhrPts, 'dailyRestingHeartRate', function(b){ return num(b.beatsPerMinute!=null?b.beatsPerMinute:(b.bpm||0)); }, 'avg');
+      // RHR: prefer FITBIT source, then avg in case multiple sensors remain
+      var rhrDaily = dailyReduce(preferFitbit(rhrPts,'dailyRestingHeartRate'), 'dailyRestingHeartRate', function(b){ return num(b.beatsPerMinute!=null?b.beatsPerMinute:(b.bpm||0)); }, 'avg');
       // Active minutes: sum ALL activity levels per data point
       var actDaily = dailyReduce(actPts, 'activeMinutes', function(b){
         var levels = b.activeMinutesByActivityLevel;
@@ -657,32 +660,59 @@
         }
         return num(b.minutes!=null?b.minutes:(b.count!=null?b.count:(b.value||0)));
       }, 'sum');
-      // Sleep: fetched unfiltered — cut to last 7 days client-side before reducing
-      var cutoff = daysAgo(6).getTime();
-      var sleepPts7 = sleepPts.filter(function(p){
-        var d = pointDate(p, 'sleep');
-        return d && !isNaN(d.getTime()) && d.getTime() >= cutoff;
+      // Sleep: confirmed fields — interval.startTime/endTime (ISO Z), stages[] with .type
+      // Group by WAKE date (endTime); one session per day (keep longest)
+      var cutoff7 = daysAgo(6).getTime();
+      var sleepSessions = [];
+      sleepPts.forEach(function(p){
+        var b=p.sleep||{}, ival=b.interval||{};
+        var startStr=ival.startTime, endStr=ival.endTime;
+        if(!startStr||!endStr) return;
+        var startD=new Date(startStr), endD=new Date(endStr);
+        if(isNaN(startD.getTime())||isNaN(endD.getTime())) return;
+        if(endD.getTime()<cutoff7) return;
+        var wakeDate=endD.toISOString().slice(0,10);
+        var sm={REM:0,DEEP:0,LIGHT:0,AWAKE:0};
+        (b.stages||[]).forEach(function(s){
+          var sd=new Date(s.startTime),ed=new Date(s.endTime);
+          if(isNaN(sd.getTime())||isNaN(ed.getTime())) return;
+          var m=(ed-sd)/60000;
+          if(s.type==='REM') sm.REM+=m;
+          else if(s.type==='DEEP') sm.DEEP+=m;
+          else if(s.type==='LIGHT') sm.LIGHT+=m;
+          else if(s.type==='AWAKE') sm.AWAKE+=m;
+        });
+        var totalMins=sm.REM+sm.DEEP+sm.LIGHT;
+        if(totalMins===0) totalMins=(endD-startD)/60000;
+        var tibMins=totalMins+sm.AWAKE;
+        sleepSessions.push({day:wakeDate,startTime:startD,endTime:endD,stageMins:sm,
+          totalSleepHrs:totalMins/60,timeInBedHrs:tibMins/60,
+          efficiency:tibMins>0?(totalMins/tibMins)*100:0});
       });
-      // Sleep duration parse fields TBD from raw 200 response — best-effort for now
-      var sleepDaily = dailyReduce(sleepPts7, 'sleep', function(b){
-        var sec = num(b.durationMillis? b.durationMillis/1000 : (b.totalSleepSeconds ||
-          (b.session && b.session.endTime && b.session.startTime ?
-            (new Date(b.session.endTime)-new Date(b.session.startTime))/1000 :
-          (b.interval && b.interval.endTime && b.interval.startTime ?
-            (new Date(b.interval.endTime)-new Date(b.interval.startTime))/1000 : 0))));
-        return sec/3600;
-      }, 'sum');
+      var sessionsByDay={};
+      sleepSessions.forEach(function(s){
+        if(!sessionsByDay[s.day]||s.totalSleepHrs>sessionsByDay[s.day].totalSleepHrs) sessionsByDay[s.day]=s;
+      });
+      var sleepDaily=[];
+      for(var i=6;i>=0;i--){
+        var dkSl=daysAgo(i).toISOString().slice(0,10);
+        var sS=sessionsByDay[dkSl];
+        sleepDaily.push({day:dkSl,value:sS?sS.totalSleepHrs:0});
+      }
 
-      // HRV: Daily type, same dedup pattern as RHR; field best-guess — full response logged above
-      var hrvDaily = dailyReduce(hrvPts, 'dailyHeartRateVariability', function(b){
-        return num(b.rmssd != null ? b.rmssd : (b.milliseconds != null ? b.milliseconds : (b.sdnn != null ? b.sdnn : 0)));
+      // HRV: confirmed field averageHeartRateVariabilityMilliseconds; prefer FITBIT source
+      var hrvDaily = dailyReduce(preferFitbit(hrvPts,'dailyHeartRateVariability'), 'dailyHeartRateVariability', function(b){
+        return num(b.averageHeartRateVariabilityMilliseconds!=null?b.averageHeartRateVariabilityMilliseconds:0);
       }, 'avg');
 
       // Build aggregate stats
       var stepsToday = stepsDaily.length? stepsDaily[stepsDaily.length-1].value : 0;
       var avgSteps = avg(stepsDaily);
       var rhrToday = (function(){ for(var i=rhrDaily.length-1;i>=0;i--){ if(rhrDaily[i].value>0) return rhrDaily[i].value; } return 0; })();
-      var sleepLast = (function(){ for(var i=sleepDaily.length-1;i>=0;i--){ if(sleepDaily[i].value>0) return sleepDaily[i].value; } return 0; })();
+      var sleepLast=0, lastSleepSess=null;
+      for(var j=sleepDaily.length-1;j>=0;j--){
+        if(sleepDaily[j].value>0){sleepLast=sleepDaily[j].value;lastSleepSess=sessionsByDay[sleepDaily[j].day];break;}
+      }
       var avgSleep = avg(sleepDaily);
       var actToday = actDaily.length? actDaily[actDaily.length-1].value : 0;
       var activeDaysMet = actDaily.filter(function(d){return d.value>=GOALS.activeMin;}).length;
@@ -710,6 +740,23 @@
       $('hxSleep').textContent = sleepLast? sleepLast.toFixed(1)+'h' : '—';
       setZone('hxZSleep', sleepLast? zSleep(sleepLast):'z-norm');
 
+      // ---- Sleep stages bar ----
+      if(lastSleepSess){
+        var sm=lastSleepSess.stageMins, tib=sm.REM+sm.DEEP+sm.LIGHT+sm.AWAKE;
+        if(tib>0){
+          $('hxStgRem').style.width=(sm.REM/tib*100).toFixed(1)+'%';
+          $('hxStgDeep').style.width=(sm.DEEP/tib*100).toFixed(1)+'%';
+          $('hxStgLight').style.width=(sm.LIGHT/tib*100).toFixed(1)+'%';
+          $('hxStgAwake').style.width=(sm.AWAKE/tib*100).toFixed(1)+'%';
+          $('hxStgRemTxt').textContent=hrsMin(sm.REM/60);
+          $('hxStgDeepTxt').textContent=hrsMin(sm.DEEP/60);
+          $('hxStgLightTxt').textContent=hrsMin(sm.LIGHT/60);
+          $('hxStgAwakeTxt').textContent=hrsMin(sm.AWAKE/60);
+          $('hxStagesMeta').textContent=hrsMin(sleepLast)+' sleep · '+Math.round(lastSleepSess.efficiency)+'% efficiency';
+          $('hxStages').style.display='block';
+        }
+      }
+
       $('hxActive').textContent = actToday? Math.round(actToday) : '—';
       setZone('hxZActive', zActive(actToday));
 
@@ -735,7 +782,7 @@
       paintReadinessRing(rdScore);
 
       // ---- Sleep consistency ----
-      buildSleepConsistency(sleepPts7);
+      buildSleepConsistency(sessionsByDay);
 
       // ---- Insights ----
       buildInsights({ avgSteps:avgSteps, avgSleepHrs:avgSleep, rhr:rhrToday, avgRhr:avgRhr, rhrTrend:rhrTrend, sleepTrend:sleepTrend, stepsDeclining:stepsDeclining, hrvToday:hrvToday, avgHrv:avgHrv });
