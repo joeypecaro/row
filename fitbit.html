@@ -332,13 +332,15 @@
   }
 
   // ===== Date helpers =====
-  // Strip milliseconds — some Google Health API filters reject .000Z form
+  // All day boundaries use LOCAL time — avoids phantom next-day columns for US timezones
   function iso(d){ return d.toISOString().replace(/\.\d{3}Z$/, 'Z'); }
-  // Plain date (YYYY-MM-DD) — required for Daily record type filters (no T, no Z)
-  function plainDate(d){ return d.toISOString().slice(0,10); }
-  function daysAgo(n){ var d=new Date(); d.setUTCDate(d.getUTCDate()-n); d.setUTCHours(0,0,0,0); return d; }
-  function todayStart(){ var d=new Date(); d.setUTCHours(0,0,0,0); return d; }
-  function tomorrowStart(){ var d=todayStart(); d.setUTCDate(d.getUTCDate()+1); return d; }
+  // Local date string YYYY-MM-DD (used everywhere for day bucketing)
+  function localDateStr(d){ var y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate(); return y+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day; }
+  // Plain date for Daily API filters — must be local calendar date, not UTC
+  function plainDate(d){ return localDateStr(d); }
+  function daysAgo(n){ var d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-n); return d; }
+  function todayStart(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+  function tomorrowStart(){ var d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+1); return d; }
 
   // ===== Proxy fetch =====
   // The proxy is expected to forward {path, filter, pageSize} to
@@ -375,9 +377,9 @@
   function pointDate(p, key){
     var b = p[key] || {};
     var d;
-    // Daily type: date is a {year, month, day} object — NEVER pass to new Date() directly
+    // Daily type: date is a {year, month, day} object — use local midnight so localDateStr() works correctly
     if (b.date && typeof b.date === 'object' && b.date.year) {
-      d = new Date(Date.UTC(b.date.year, (b.date.month || 1) - 1, b.date.day || 1));
+      d = new Date(b.date.year, (b.date.month || 1) - 1, b.date.day || 1);
       if (!isNaN(d.getTime())) return d;
     }
     // Interval / Session types: date is an ISO string
@@ -398,7 +400,7 @@
     points.forEach(function(p){
       var d = pointDate(p, key);
       if (!d || isNaN(d.getTime())) return; // skip any point with an unresolvable date
-      var dk = d.toISOString().slice(0,10);
+      var dk = localDateStr(d);
       var v = valueFn(p[key]||{}, p);
       if (byDay[dk] == null) byDay[dk] = { sum:0, count:0, last:v };
       byDay[dk].sum += v; byDay[dk].count++; byDay[dk].last = v;
@@ -406,7 +408,7 @@
     // Build last 7 days array (oldest -> newest)
     var out = [];
     for (var i=6;i>=0;i--){
-      var dk = daysAgo(i).toISOString().slice(0,10);
+      var dk = localDateStr(daysAgo(i));
       var rec = byDay[dk];
       var val = 0;
       if (rec){ val = mode==='avg' ? rec.sum/rec.count : (mode==='last'? rec.last : rec.sum); }
@@ -423,10 +425,17 @@
     points.forEach(function(p){
       var d=pointDate(p,typeKey);
       if(!d||isNaN(d.getTime())) return;
-      var dk=d.toISOString().slice(0,10);
+      var dk=localDateStr(d);
       if(!byDay[dk]||p.platform==='FITBIT') byDay[dk]=p;
     });
     return Object.keys(byDay).map(function(k){return byDay[k];});
+  }
+
+  // For interval metrics (steps, active-min): keep ALL FITBIT points, exclude HEALTH_KIT overlap.
+  // Unlike preferFitbit (one per day), this preserves multiple intra-day FITBIT intervals for summing.
+  function fitbitOnly(points){
+    var hasFitbit=points.some(function(p){return p.platform==='FITBIT';});
+    return hasFitbit?points.filter(function(p){return p.platform==='FITBIT';}):points;
   }
 
   // ===== Zone classification =====
@@ -648,12 +657,12 @@
       var actPts   = res[3].status==='fulfilled'? res[3].value : [];
       var hrvPts   = res[4].status==='fulfilled'? res[4].value : [];
 
-      // Steps: count field is steps.count (string)
-      var stepsDaily = dailyReduce(stepsPts, 'steps', function(b){ return num(b.count!=null?b.count:(b.value!=null?b.value:0)); }, 'sum');
+      // Steps: FITBIT-only to avoid double-counting Apple HealthKit re-exports
+      var stepsDaily = dailyReduce(fitbitOnly(stepsPts), 'steps', function(b){ return num(b.count!=null?b.count:(b.value!=null?b.value:0)); }, 'sum');
       // RHR: prefer FITBIT source, then avg in case multiple sensors remain
       var rhrDaily = dailyReduce(preferFitbit(rhrPts,'dailyRestingHeartRate'), 'dailyRestingHeartRate', function(b){ return num(b.beatsPerMinute!=null?b.beatsPerMinute:(b.bpm||0)); }, 'avg');
-      // Active minutes: sum ALL activity levels per data point
-      var actDaily = dailyReduce(actPts, 'activeMinutes', function(b){
+      // Active minutes: FITBIT-only for same reason as steps
+      var actDaily = dailyReduce(fitbitOnly(actPts), 'activeMinutes', function(b){
         var levels = b.activeMinutesByActivityLevel;
         if (levels && levels.length) {
           return levels.reduce(function(s, l){ return s + num(l.activeMinutes||0); }, 0);
@@ -671,7 +680,7 @@
         var startD=new Date(startStr), endD=new Date(endStr);
         if(isNaN(startD.getTime())||isNaN(endD.getTime())) return;
         if(endD.getTime()<cutoff7) return;
-        var wakeDate=endD.toISOString().slice(0,10);
+        var wakeDate=localDateStr(endD);
         var sm={REM:0,DEEP:0,LIGHT:0,AWAKE:0};
         (b.stages||[]).forEach(function(s){
           var sd=new Date(s.startTime),ed=new Date(s.endTime);
@@ -695,7 +704,7 @@
       });
       var sleepDaily=[];
       for(var i=6;i>=0;i--){
-        var dkSl=daysAgo(i).toISOString().slice(0,10);
+        var dkSl=localDateStr(daysAgo(i));
         var sS=sessionsByDay[dkSl];
         sleepDaily.push({day:dkSl,value:sS?sS.totalSleepHrs:0});
       }
@@ -707,6 +716,7 @@
 
       // Build aggregate stats
       var stepsToday = stepsDaily.length? stepsDaily[stepsDaily.length-1].value : 0;
+      console.log('[HEALTH] stepsToday(stat)='+stepsToday, 'chart-bar-today='+stepsDaily[stepsDaily.length-1].value, 'match='+(stepsToday===stepsDaily[stepsDaily.length-1].value));
       var avgSteps = avg(stepsDaily);
       var rhrToday = (function(){ for(var i=rhrDaily.length-1;i>=0;i--){ if(rhrDaily[i].value>0) return rhrDaily[i].value; } return 0; })();
       var sleepLast=0, lastSleepSess=null;
