@@ -258,9 +258,10 @@
       </div>
 
       <!-- Biomarker strip -->
-      <div class="hx-bio" style="grid-template-columns:repeat(2,1fr)">
+      <div class="hx-bio" style="grid-template-columns:repeat(3,1fr)">
         <div class="hx-bio-item"><span class="hx-bio-label">Avg steps</span><span class="hx-bio-val" id="hxAvgSteps">—</span></div>
         <div class="hx-bio-item"><span class="hx-bio-label">Avg sleep</span><span class="hx-bio-val" id="hxAvgSleep">—</span></div>
+        <div class="hx-bio-item"><span class="hx-bio-label">HRV</span><span class="hx-bio-val" id="hxHrv">—</span><span class="hx-bio-label" style="font-size:8.5px;margin-top:2px">today · ms</span></div>
       </div>
 
       <!-- Sleep consistency -->
@@ -772,6 +773,8 @@
 
       $('hxAvgSteps').textContent = avgSteps? fmt(avgSteps) : '—';
       $('hxAvgSleep').textContent = avgSleep? avgSleep.toFixed(1)+'h' : '—';
+      $('hxHrv').textContent = hrvToday? Math.round(hrvToday) : '—';
+      console.log('[HEALTH] HRV readiness-val='+hrvToday+' display='+Math.round(hrvToday)+'ms match='+(hrvToday>0));
 
       // ---- Charts ----
       stepsDaily.forEach(function(d){ d.zone=zSteps(d.value); });
