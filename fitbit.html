@@ -420,23 +420,25 @@
 
   function avg(arr){ var v=arr.filter(function(x){return x.value>0;}); return v.length? v.reduce(function(a,b){return a+b.value;},0)/v.length : 0; }
 
-  // One data point per day, FITBIT wins over HEALTH_KIT when both sources exist
+  // Google Health API stores the platform under dataSource.platform, not p.platform directly
+  function getPlatform(p){ return (p.dataSource&&p.dataSource.platform)||p.platform||''; }
+
+  // One point per LOCAL day; FITBIT wins over HEALTH_KIT (daily aggregates: RHR, HRV)
   function preferFitbit(points, typeKey){
     var byDay={};
     points.forEach(function(p){
       var d=pointDate(p,typeKey);
       if(!d||isNaN(d.getTime())) return;
       var dk=localDateStr(d);
-      if(!byDay[dk]||p.platform==='FITBIT') byDay[dk]=p;
+      if(!byDay[dk]||getPlatform(p)==='FITBIT') byDay[dk]=p;
     });
     return Object.keys(byDay).map(function(k){return byDay[k];});
   }
 
-  // For interval metrics (steps, active-min): keep ALL FITBIT points, exclude HEALTH_KIT overlap.
-  // Unlike preferFitbit (one per day), this preserves multiple intra-day FITBIT intervals for summing.
+  // For interval metrics (steps, active-min): keep ALL FITBIT intra-day points, drop HEALTH_KIT overlap.
   function fitbitOnly(points){
-    var hasFitbit=points.some(function(p){return p.platform==='FITBIT';});
-    return hasFitbit?points.filter(function(p){return p.platform==='FITBIT';}):points;
+    var hasFitbit=points.some(function(p){return getPlatform(p)==='FITBIT';});
+    return hasFitbit?points.filter(function(p){return getPlatform(p)==='FITBIT';}):points;
   }
 
   // ===== Zone classification =====
@@ -717,7 +719,15 @@
 
       // Build aggregate stats
       var stepsToday = stepsDaily.length? stepsDaily[stepsDaily.length-1].value : 0;
-      console.log('[HEALTH] stepsToday(stat)='+stepsToday, 'chart-bar-today='+stepsDaily[stepsDaily.length-1].value, 'match='+(stepsToday===stepsDaily[stepsDaily.length-1].value));
+      // Verify per-platform step sums for today so we can confirm FITBIT-only dedup
+      var todayKey=localDateStr(daysAgo(0)), fbStps=0, hkStps=0;
+      stepsPts.forEach(function(p){
+        var d=pointDate(p,'steps'); if(!d||isNaN(d.getTime())) return;
+        if(localDateStr(d)!==todayKey) return;
+        var b=p.steps||{}, v=num(b.count!=null?b.count:(b.value!=null?b.value:0));
+        if(getPlatform(p)==='FITBIT') fbStps+=v; else if(getPlatform(p)==='HEALTH_KIT') hkStps+=v;
+      });
+      console.log('[HEALTH] Steps FITBIT-today='+Math.round(fbStps)+' HEALTH_KIT-today='+Math.round(hkStps)+' displayed='+stepsToday);
       var avgSteps = avg(stepsDaily);
       var rhrToday = (function(){ for(var i=rhrDaily.length-1;i>=0;i--){ if(rhrDaily[i].value>0) return rhrDaily[i].value; } return 0; })();
       var sleepLast=0, lastSleepSess=null;
@@ -774,7 +784,7 @@
       $('hxAvgSteps').textContent = avgSteps? fmt(avgSteps) : '—';
       $('hxAvgSleep').textContent = avgSleep? avgSleep.toFixed(1)+'h' : '—';
       $('hxHrv').textContent = hrvToday? Math.round(hrvToday) : '—';
-      console.log('[HEALTH] HRV readiness-val='+hrvToday+' display='+Math.round(hrvToday)+'ms match='+(hrvToday>0));
+      console.log('[HEALTH] HRV readiness-val='+hrvToday.toFixed(1)+'ms display='+Math.round(hrvToday)+'ms (expect ~125 Fitbit not ~71 Apple)');
 
       // ---- Charts ----
       stepsDaily.forEach(function(d){ d.zone=zSteps(d.value); });
